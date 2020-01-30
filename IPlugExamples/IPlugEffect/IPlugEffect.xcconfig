@@ -30,9 +30,8 @@ RTAS_DEFS = RTAS_API
 
 AAX_DEFS = AAX_API
 
-APP_DEFS = SA_API __MACOSX_CORE__ WDL_NO_DEFINE_MINMAX//__UNIX_JACK__
+APP_DEFS = SA_API __MACOSX_CORE__ 
 
-IOS_DEFS = SA_API
 // Preprocessor definitions for all Debug builds
 DEBUG_DEFS = _DEBUG
 
@@ -60,3 +59,4 @@ RELEASE_OPTIMIZE = 3 //0,1,2,3,s
 // Debug build options
 DEBUG_OPTIMIZE = 0 //0,1,2,3,s
 
+ARCHS = $(ARCHS_STANDARD_64_BIT)

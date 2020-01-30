@@ -4,7 +4,6 @@
 #include "Containers.h"
 #include "IPlugOSDetect.h"
 
-#ifndef OS_IOS
 #include "../swell/swell.h"
 #include "../lice/lice_text.h"
 
@@ -23,7 +22,8 @@ struct IBitmap
     , mFramesAreHorizontal(framesAreHorizontal)
   {}
 
-  inline int frameHeight() const { return H / N; }
+  inline int frameWidth() const { return mFramesAreHorizontal ? W / N : W; }
+  inline int frameHeight() const { return mFramesAreHorizontal ? H : H / N; }
 };
 
 struct IColor
@@ -139,7 +139,22 @@ struct IRECT
 
   IRECT() { L = T = R = B = 0; }
   IRECT(int l, int t, int r, int b) : L(l), R(r), T(t), B(b) {}
-  IRECT(int x, int y, IBitmap* pBitmap) : L(x), T(y), R(x + pBitmap->W), B(y + pBitmap->H / pBitmap->N) {}
+  
+  IRECT(int x, int y, IBitmap *pBitmap)
+  {
+    L = x;
+    T = y;
+    if (pBitmap->mFramesAreHorizontal)
+    {
+      R = L + pBitmap->W / pBitmap->N;
+      B = T + pBitmap->H;
+    }
+    else
+    {
+      R = L + pBitmap->W;
+      B = T + pBitmap->H / pBitmap->N;
+    }
+  }
 
   bool Empty() const
   {
@@ -220,7 +235,7 @@ struct IRECT
 
   inline IRECT SubRectVertical(int numSlices, int sliceIdx)
   {
-    int heightOfSubRect = (H() / numSlices);
+    float heightOfSubRect = (float(H()) / numSlices);
     int t = heightOfSubRect * sliceIdx;
 
     return IRECT(L, T + t, R, T + t + heightOfSubRect);
@@ -228,7 +243,7 @@ struct IRECT
 
   inline IRECT SubRectHorizontal(int numSlices, int sliceIdx)
   {
-    int widthOfSubRect = (W() / numSlices);
+    float widthOfSubRect = (float(W()) / numSlices);
     int l = widthOfSubRect * sliceIdx;
 
     return IRECT(L + l, T, L + l + widthOfSubRect, B);
@@ -285,8 +300,6 @@ struct IMouseMod
   IMouseMod(bool l = false, bool r = false, bool s = false, bool c = false, bool a = false)
     : L(l), R(r), S(s), C(c), A(a) {}
 };
-
-#endif // !OS_IOS
 
 struct IMidiMsg
 {

@@ -190,7 +190,29 @@ class WDL_DirScan
 #ifdef _WIN32
        return !!(m_fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY); 
 #else
-       return m_ent && (m_ent->d_type & DT_DIR);
+#ifndef __APPLE__
+       // we could enable this on OSX, need to check to make sure realpath(x,NULL) is supported on 10.5+
+       char tmp[2048];
+       if (m_ent && m_ent->d_type == DT_LNK)
+       {
+         snprintf(tmp,sizeof(tmp),"%s/%s",m_leading_path.Get(),m_ent->d_name);
+         char *rp = realpath(tmp,NULL);
+         if (rp)
+         {
+           DIR *d = opendir(rp);
+           free(rp);
+
+           if (d) { closedir(d); return 1; }
+         }
+       }
+       else if (m_ent && m_ent->d_type == DT_UNKNOWN)
+       {
+         snprintf(tmp,sizeof(tmp),"%s/%s",m_leading_path.Get(),m_ent->d_name);
+         DIR *d = opendir(tmp);
+         if (d) { closedir(d); return 1; }
+       }
+#endif
+       return m_ent && (m_ent->d_type == DT_DIR);
 #endif
     }
 
@@ -203,14 +225,25 @@ class WDL_DirScan
     DWORD GetFileAttributes() const { return m_fd.dwFileAttributes; }
 #elif defined(_WDL_SWELL_H_)
 
-  // todo: compat for more of these functions
-  
+  void GetCurrentCreationTime(FILETIME *ft)
+  {
+    char tmp[2048];
+    snprintf(tmp,sizeof(tmp),"%s/%s",m_leading_path.Get(),GetCurrentFN());
+    struct stat64 st={0,};
+    stat64(tmp,&st);
+    unsigned long long a=(unsigned long long)st.st_ctime; // seconds since january 1st, 1970
+    a+=11644473600ull; // 1601->1970
+    a*=10000000; // seconds to 1/10th microseconds (100 nanoseconds)
+    ft->dwLowDateTime=a & 0xffffffff;
+    ft->dwHighDateTime=a>>32;
+  }
+
   void GetCurrentLastWriteTime(FILETIME *ft)
   { 
     char tmp[2048];
     snprintf(tmp,sizeof(tmp),"%s/%s",m_leading_path.Get(),GetCurrentFN());
-    struct stat st={0,};
-    stat(tmp,&st);
+    struct stat64 st={0,};
+    stat64(tmp,&st);
     unsigned long long a=(unsigned long long)st.st_mtime; // seconds since january 1st, 1970
     a+=11644473600ull; // 1601->1970
     a*=10000000; // seconds to 1/10th microseconds (100 nanoseconds)
@@ -221,8 +254,8 @@ class WDL_DirScan
   { 
     char tmp[2048];
     snprintf(tmp,sizeof(tmp),"%s/%s",m_leading_path.Get(),GetCurrentFN());
-    struct stat st={0,};
-    stat(tmp,&st);
+    struct stat64 st={0,};
+    stat64(tmp,&st);
     
     if (HighWord) *HighWord = (DWORD)(st.st_size>>32); 
     return (DWORD)(st.st_size&0xffffffff); 

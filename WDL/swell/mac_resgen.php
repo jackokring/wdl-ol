@@ -40,14 +40,53 @@ function convertquotes($in)
   }
   return $ret;
 }
+
+function utf_fgets($fp, &$state)
+{
+  if ($state==0)
+  {
+    $state = -1;
+    $s = fread($fp,2);
+    if (ord($s[0])==0xff && ord($s[1]) == 0xfe) $state=1; // UTF-16LE
+    else if (ord($s[0])==0xfe && ord($s[1]) == 0xff) $state=2; // UTF-16BE
+    else if (ord($s[0])==0xef && ord($s[1]) == 0xbb)
+    {
+      $s2 = fread($fp,1);
+      if (ord($s2[0]) != 0xbf) return $s . $s2 . fgets($fp,4096);
+    }
+  }
+  if ($state < 0) return fgets($fp,4096);
+
+  $ret = "";
+  while ($s = fread($fp,2))
+  {
+    if ($state == 1) $s = ord($s[0]) | (ord($s[1])<<8);
+    else $s = ord($s[1]) | (ord($s[0])<<8);
+    if ($s < 128) 
+    {
+      $ret .= chr($s);
+      if ($s == ord("\n")) break;
+    }
+    else if ($s <= 0x7ff) $ret .= chr(0xc0 | (($s>>6)&0x1f)) . chr(0x80 | ($s&0x3f));
+    else $ret .= chr(0xe0 | (($s>>12)&0xf)) . chr(0x80 | (($s)>>6)&0x3f) . chr(0x80 | ($s&0x3f));
+  }
+
+  return $ret;
+}
+
 function swell_rc2cpp_dialog($fp) // returns array with ["data"] and optionally ["error"]
 {
   fseek($fp,0,SEEK_SET);
+  $utf_state=0;
   $errstr="";
   $retstr = "";
 
   $retstr .= '#ifndef SWELL_DLG_SCALE_AUTOGEN' . "\n";
-  $retstr .= '#define SWELL_DLG_SCALE_AUTOGEN 1.7' . "\n";
+  $retstr .= '#ifdef __APPLE__' . "\n";
+  $retstr .= '  #define SWELL_DLG_SCALE_AUTOGEN 1.7' . "\n";
+  $retstr .= '#else' . "\n";
+  $retstr .= '  #define SWELL_DLG_SCALE_AUTOGEN 1.8' . "\n";
+  $retstr .= '#endif' . "\n";
   $retstr .= '#endif' . "\n";
   $retstr .= '#ifndef SWELL_DLG_FLAGS_AUTOGEN' . "\n";
   $retstr .= '#define SWELL_DLG_FLAGS_AUTOGEN SWELL_DLG_WS_FLIPPED|SWELL_DLG_WS_NOAUTOSIZE' . "\n";
@@ -67,12 +106,13 @@ function swell_rc2cpp_dialog($fp) // returns array with ["data"] and optionally 
   for (;;) 
   {
     if ($next_line != "") { $x=$next_line; $next_line =""; }
-    else if (!($x=fgets($fp))) break;
+    else if (!($x=utf_fgets($fp,$utf_state))) break;
     $x = convertquotes($x);
 
     $y=trim($x);
     if ($dlg_state>=2) 
     {
+      if (preg_match("/^LTEXT(.*), *WS_EX_RIGHT$/",$y,$match)) $y = "RTEXT" . $match[1];
       $dlg_contents .= $y . "\n";
       if ($y == "END")
       {
@@ -138,7 +178,7 @@ function swell_rc2cpp_dialog($fp) // returns array with ["data"] and optionally 
               $rep=0;
               for (;;) 
               {
-                $next_line = fgets($fp,4096);
+                $next_line = utf_fgets($fp,$utf_state);
                 if (!($next_line )) { $next_line=""; break; }
                 if (substr($next_line,0,1)==" " || substr($next_line,0,1)=="\t")
                 {
@@ -192,10 +232,11 @@ function swell_rc2cpp_menu($fp) // returns array with ["data"] and optionally ["
   $errstr="";
 
   fseek($fp,0,SEEK_SET);
+  $utf_state=0;
 
   $menu_symbol="";
   $menu_depth=0;
-  while (($x=fgets($fp)))
+  while (($x=utf_fgets($fp,$utf_state)))
   {
     $x = convertquotes($x);
 
@@ -252,16 +293,21 @@ $lp = dirname(__FILE__);
 $proc=0;
 $skipped=0;
 $err=0;
+$quiet=0;
 for (; $x < count($argv); $x ++)
 {
    $srcfn = $argv[$x];
+   if ($srcfn == "--quiet")
+   {
+     $quiet = 1;
+     continue;
+   }
    if (!stristr($srcfn,".rc") || !($fp = @fopen($srcfn,"r")))
    {
       $err++;
       echo "$srcfn: not valid or not found!\n";
       continue;
    }
-   echo "$srcfn: ";
    $ofnmenu = $srcfn . "_mac_menu";
    $ofndlg = $srcfn . "_mac_dlg";
 
@@ -271,7 +317,7 @@ for (; $x < count($argv); $x ++)
    if ($res["error"] != "" || $res2["error"] != "")
    {
      $err++;
-     echo "error";
+     echo "$srcfn: error";
      if ($res["error"] != "") echo " dialog: " . $res["error"];
      if ($res2["error"] != "") echo " menu: " . $res2["error"];
      echo "\n";
@@ -290,12 +336,18 @@ for (; $x < count($argv); $x ++)
      if (!file_put_contents($ofnmenu,$res2["data"],LOCK_EX)) { echo "error writing $ofnmenu\n"; $err++; }
    }
 
+   if ($f != "") 
+   {
+     $proc++; 
+   }
+   else 
+   {
+     $skipped++;
+     $f = "skipped";
+   }
 
-   if ($f) echo "$f\n";
-   else echo "skipped\n";
-   if ($f != "") $proc++; 
-   else $skipped++;
+   if (!$quiet) echo "$srcfn: $f\n";
 }
-echo "processed $proc, skipped $skipped, error $err\n";
+if (!$quiet || $proc || $err) echo "processed $proc, skipped $skipped, error $err\n";
 
 ?>

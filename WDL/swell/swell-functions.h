@@ -1,5 +1,5 @@
-/* Cockos SWELL (Simple/Small Win32 Emulation Layer for L****)
-   Copyright (C) 2006-2010, Cockos, Inc.
+/* Cockos SWELL (Simple/Small Win32 Emulation Layer for Linux/OSX)
+   Copyright (C) 2006 and later, Cockos, Inc.
 
     This software is provided 'as-is', without any express or implied
     warranty.  In no event will the authors be held liable for any damages
@@ -489,6 +489,7 @@ SWELL_API_DEFINE(int, SWELL_GetListViewHeaderHeight, (HWND h))
 SWELL_API_DEFINE(HIMAGELIST, ImageList_CreateEx,())
 SWELL_API_DEFINE(BOOL, ImageList_Remove, (HIMAGELIST list, int idx))
 SWELL_API_DEFINE(int, ImageList_ReplaceIcon,(HIMAGELIST list, int offset, HICON image))
+SWELL_API_DEFINE(int, ImageList_Add,(HIMAGELIST list, HBITMAP image, HBITMAP mask))
 SWELL_API_DEFINE(void, ImageList_Destroy, (HIMAGELIST))
 /*
 ** TabCtrl api. 
@@ -879,6 +880,10 @@ SWELL_API_DEFINE(BOOL,ResetEvent,(HANDLE evt))
 SWELL_API_DEFINE(void,SWELL_EnsureMultithreadedCocoa,())
 SWELL_API_DEFINE(void *, SWELL_InitAutoRelease,())
 SWELL_API_DEFINE(void, SWELL_QuitAutoRelease,(void *p))
+SWELL_API_DEFINE(int,SWELL_TerminateProcess,(HANDLE hand))
+SWELL_API_DEFINE(int,SWELL_GetProcessExitCode,(HANDLE hand))
+SWELL_API_DEFINE(HANDLE,SWELL_CreateProcessIO,(const char *exe, int nparams, const char **params, bool redirectIO))
+SWELL_API_DEFINE(int,SWELL_ReadWriteProcessIO,(HANDLE, int w/*stdin,stdout,stderr*/, char *buf, int bufsz))
 #endif
 
 SWELL_API_DEFINE(HANDLE,SWELL_CreateProcess,(const char *exe, int nparams, const char **params))
@@ -993,6 +998,7 @@ SWELL_API_DEFINE(void, SetTextColor,(HDC ctx, int col))
 SWELL_API_DEFINE(int, GetTextColor,(HDC ctx))
 SWELL_API_DEFINE(void, SetBkColor,(HDC ctx, int col))
 SWELL_API_DEFINE(void, SetBkMode,(HDC ctx, int col))
+SWELL_API_DEFINE(int, GetGlyphIndicesW, (HDC ctx, wchar_t *buf, int len, unsigned short *indices, int flags))
 
 SWELL_API_DEFINE(void, RoundRect,(HDC ctx, int x, int y, int x2, int y2, int xrnd, int yrnd))
 SWELL_API_DEFINE(void, PolyPolyline,(HDC ctx, POINT *pts, DWORD *cnts, int nseg))
@@ -1007,6 +1013,13 @@ SWELL_API_DEFINE(HICON, LoadNamedImage,(const char *name, bool alphaFromMask))
 SWELL_API_DEFINE(void, DrawImageInRect,(HDC ctx, HICON img, const RECT *r))
 SWELL_API_DEFINE(void, BitBlt,(HDC hdcOut, int x, int y, int w, int h, HDC hdcIn, int xin, int yin, int mode))
 SWELL_API_DEFINE(void, StretchBlt,(HDC hdcOut, int x, int y, int w, int h, HDC hdcIn, int xin, int yin, int srcw, int srch, int mode))
+#ifndef SWELL_TARGET_OSX
+SWELL_API_DEFINE(void, StretchBltFromMem,(HDC hdcOut, int x, int y, int w, int h, const void *bits, int srcw, int srch, int srcspan))
+SWELL_API_DEFINE(int, SWELL_GetScaling256, (void))
+#endif
+
+SWELL_API_DEFINE(void*, SWELL_ExtendedAPI, (const char *key, void *v))
+
 SWELL_API_DEFINE(int, GetSysColor,(int idx))
 SWELL_API_DEFINE(HBITMAP, CreateBitmap,(int width, int height, int numplanes, int bitsperpixel, unsigned char* bits))
 
@@ -1027,7 +1040,7 @@ SWELL_API_DEFINE(HDC, GetDC,(HWND)) // use these sparingly! they kinda work but 
 SWELL_API_DEFINE(HDC, GetWindowDC,(HWND)) 
 SWELL_API_DEFINE(void, ReleaseDC,(HWND, HDC))
 
-#ifdef __APPLE__
+#ifdef SWELL_TARGET_OSX
 SWELL_API_DEFINE(void, SWELL_FlushWindow,(HWND))
 #endif
             
@@ -1094,14 +1107,13 @@ SWELL_API_DEFINE(void,SWELL_SetListViewFastClickMask,(HWND hList, int mask))
 
 SWELL_API_DEFINE(void,GetTempPath,(int sz, char *buf))
 
-#ifndef __APPLE__
+#ifndef SWELL_TARGET_OSX
 SWELL_API_DEFINE(void,SWELL_initargs,(int *argc, char ***argv))
 SWELL_API_DEFINE(void,SWELL_RunMessageLoop,())
+SWELL_API_DEFINE(HWND,SWELL_CreateXBridgeWindow,(HWND viewpar, void **wref, RECT*))
 #endif
 
-#ifdef __APPLE__
-SWELL_API_DEFINE(void,SWELL_GenerateGUID,(void *g))
-#endif
+SWELL_API_DEFINE(bool,SWELL_GenerateGUID,(void *g))
 
 SWELL_API_DEFINE(BOOL,EnumChildWindows,(HWND hwnd, BOOL (*cwEnumFunc)(HWND,LPARAM),LPARAM lParam))
 
@@ -1111,10 +1123,20 @@ SWELL_API_DEFINE(BOOL,SWELL_IsButton,(HWND))
 SWELL_API_DEFINE(BOOL,SWELL_IsStaticText,(HWND))
 SWELL_API_DEFINE(void,SWELL_GetDesiredControlSize,(HWND hwnd, RECT *r))
 
-#ifdef __APPLE__
+SWELL_API_DEFINE(int,AddFontResourceEx,(LPCTSTR str, DWORD fl, void *pdv))
+
+#ifdef SWELL_TARGET_OSX
 SWELL_API_DEFINE(void,SWELL_DisableAppNap,(int disable))
 SWELL_API_DEFINE(int,SWELL_GetOSXVersion,())
 #endif
 
+SWELL_API_DEFINE(void,SWELL_Register_Cursor_Resource,(const char *idx, const char *name, int hotspot_x, int hotspot_y))
+
+#ifndef SWELL_TARGET_OSX
+SWELL_API_DEFINE(bool, SWELL_ChooseColor, (HWND, int *, int ncustom, int *custom))
+SWELL_API_DEFINE(bool, SWELL_ChooseFont, (HWND, LOGFONT*))
+#endif
+
+SWELL_API_DEFINE(bool, IsWindowEnabled, (HWND))
 
 #endif // _WDL_SWELL_H_API_DEFINED_

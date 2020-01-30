@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <UsingTask TaskName="PaceFixLogs" AssemblyFile="$(PACE_FUSION_HOME)PaceFusionUi2013.dll" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -31,47 +31,48 @@
     <ProjectGuid>{079FC65A-F0E5-4E97-B318-A16D1D0B89DF}</ProjectGuid>
     <RootNamespace>IPlugEffect</RootNamespace>
     <ProjectName>IPlugEffect-vst3</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -291,13 +292,28 @@ if exist "%programfiles(x86)%" (copy /y "$(TargetPath)" "$(VST3_64_PATH)\IPlugEf
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\conststringtable.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\doc.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\falignpop.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\falignpush.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\fplatform.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\fstrdefs.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ftypes.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\funknown.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\futils.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\fvariant.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\geoconstants.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ibstream.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\icloneable.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ierrorcontext.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ipersistent.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ipluginbase.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\istringresult.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\iupdatehandler.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\keycodes.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\pluginbasefwd.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\smartpointer.h" />
+    <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ucolorspec.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\base\ustring.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\gui\iplugview.h" />
     <ClInclude Include="..\..\VST3_SDK\pluginterfaces\vst\ivstattributes.h" />
@@ -327,6 +343,8 @@ if exist "%programfiles(x86)%" (copy /y "$(TargetPath)" "$(VST3_64_PATH)\IPlugEf
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\VST3_SDK\pluginterfaces\base\conststringtable.cpp" />
+    <ClCompile Include="..\..\VST3_SDK\pluginterfaces\base\coreiids.cpp" />
     <ClCompile Include="..\..\VST3_SDK\pluginterfaces\base\funknown.cpp" />
     <ClCompile Include="..\..\VST3_SDK\pluginterfaces\base\ustring.cpp" />
     <ClCompile Include="..\..\VST3_SDK\public.sdk\source\common\pluginview.cpp" />

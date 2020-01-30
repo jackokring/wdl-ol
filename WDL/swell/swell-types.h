@@ -1,5 +1,5 @@
-/* Cockos SWELL (Simple/Small Win32 Emulation Layer for L****)
-   Copyright (C) 2006-2010, Cockos, Inc.
+/* Cockos SWELL (Simple/Small Win32 Emulation Layer for Linux/OSX)
+   Copyright (C) 2006 and later, Cockos, Inc.
 
     This software is provided 'as-is', without any express or implied
     warranty.  In no event will the authors be held liable for any damages
@@ -109,7 +109,7 @@ typedef uintptr_t UINT_PTR, *PUINT_PTR, ULONG_PTR, *PULONG_PTR, DWORD_PTR, *PDWO
 #define MAX_PATH 1024
 
 
-#if !defined(max) && !defined(WDL_NO_DEFINE_MINMAX)
+#if !defined(max) && !defined(WDL_NO_DEFINE_MINMAX) && !defined(NOMINMAX)
 #define max(x,y) ((x)<(y)?(y):(x))
 #define min(x,y) ((x)<(y)?(x):(y))
 #endif
@@ -362,6 +362,10 @@ typedef struct tagDRAWITEMSTRUCT {
 typedef struct tagBITMAP {
   LONG bmWidth;
   LONG bmHeight;
+  LONG bmWidthBytes;
+  WORD bmPlanes;
+  WORD bmBitsPixel;
+  LPVOID bmBits;
 } BITMAP, *PBITMAP, *LPBITMAP;
 #define ODT_MENU        1
 #define ODT_LISTBOX     2
@@ -478,9 +482,10 @@ typedef struct
   DWORD_PTR dwItemData;
   char *dwTypeData;
   int cch;
+  HBITMAP hbmpItem;
 } MENUITEMINFO;
 
-#define SetMenuDefaultItem(a,b,c) (0)
+#define SetMenuDefaultItem(a,b,c) do { if ((a)||(b)||(c)) { } } while(0)
 
 typedef struct {
   POINT ptReserved, ptMaxSize, ptMaxPosition, ptMinTrackSize, ptMaxTrackSize;
@@ -810,6 +815,7 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define BS_AUTO3STATE      0x00000006L
 #define BS_AUTORADIOBUTTON 0x00000009L
 #define BS_OWNERDRAW       0x0000000BL
+#define BS_BITMAP          0x00000080L
 
 
 
@@ -865,6 +871,7 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define MIIM_TYPE 4
 #define MIIM_SUBMENU 8
 #define MIIM_DATA 16
+#define MIIM_BITMAP 0x80
 
 #define MF_ENABLED 0
 #define MF_GRAYED 1
@@ -899,6 +906,7 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define WM_MOVE                         0x0003
 #define WM_SIZE                         0x0005
 #define WM_ACTIVATE                     0x0006
+#define WM_SETREDRAW                    0x000B // implemented on macOS NSTableViews, maybe elsewhere?
 #define WM_SETTEXT			0x000C // not implemented on OSX, used internally on Linux
 #define WM_PAINT                        0x000F
 #define WM_CLOSE                        0x0010
@@ -912,8 +920,8 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define WM_SETFONT                      0x0030
 #define WM_GETFONT                      0x0031
 #define WM_GETOBJECT 			0x003D // implemented differently than win32 -- see virtwnd/virtwnd-nsaccessibility.mm
+#define WM_COPYDATA                     0x004A
 #define WM_NOTIFY                       0x004E
-
 #define WM_CONTEXTMENU                  0x007B
 #define WM_STYLECHANGED                 0x007D
 #define WM_DISPLAYCHANGE                0x007E
@@ -968,7 +976,6 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define WM_DROPFILES                    0x0233
 #define WM_USER                         0x0400
 
-
 #define HTCAPTION 2
 #define HTBOTTOMRIGHT 17
 
@@ -985,6 +992,7 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define CBN_SELCHANGE       1
 #define CBN_EDITCHANGE      5
 #define CBN_DROPDOWN        7
+#define CBN_CLOSEUP         8
 #define CB_ERR (-1)
 
 #define EM_GETSEL               0xF0B0
@@ -1210,19 +1218,19 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define SRCCOPY 0
 #define SRCCOPY_USEALPHACHAN 0xdeadbeef
 #define PS_SOLID 0
-#define DT_CALCRECT 1
-#define DT_VCENTER 2
-#define DT_CENTER 4
-#define DT_END_ELLIPSIS 8
-#define DT_BOTTOM 16
-#define DT_RIGHT 32
-#define DT_SINGLELINE 64
-#define DT_NOPREFIX 128
-#define DT_NOCLIP 256
-#define DT_WORDBREAK 512
 
 #define DT_TOP 0
 #define DT_LEFT 0
+#define DT_CENTER 1
+#define DT_RIGHT 2
+#define DT_VCENTER 4
+#define DT_BOTTOM 8
+#define DT_WORDBREAK 0x10
+#define DT_SINGLELINE 0x20
+#define DT_NOCLIP 0x100
+#define DT_CALCRECT 0x400
+#define DT_NOPREFIX 0x800
+#define DT_END_ELLIPSIS 0x8000
 
 #define FW_DONTCARE         0
 #define FW_THIN             100
@@ -1258,6 +1266,8 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define NULL_PEN 1
 #define NULL_BRUSH 2
 
+#define GGI_MARK_NONEXISTING_GLYPHS 1
+
 #define GMEM_ZEROINIT 1
 #define GMEM_FIXED 0
 #define GMEM_MOVEABLE 0
@@ -1276,7 +1286,6 @@ __attribute__ ((visibility ("default"))) BOOL WINAPI DllMain(HINSTANCE hInstDLL,
 #define _RC_CHOP        0x00000300              /*   chop */
 
 
-extern struct SWELL_CursorResourceIndex *SWELL_curmodule_cursorresource_head;
 extern struct SWELL_DialogResourceIndex *SWELL_curmodule_dialogresource_head;
 extern struct SWELL_MenuResourceIndex *SWELL_curmodule_menuresource_head;
 
@@ -1350,6 +1359,8 @@ extern struct SWELL_MenuResourceIndex *SWELL_curmodule_menuresource_head;
 #define INFINITE            0xFFFFFFFF
 
 
+#define FR_PRIVATE 1 // AddFontResourceEx()
+
 typedef struct _ICONINFO
 {
   BOOL fIcon;
@@ -1358,6 +1369,13 @@ typedef struct _ICONINFO
   HBITMAP hbmMask;
   HBITMAP hbmColor;
 } ICONINFO, *PICONINFO;
+
+typedef struct _COPYDATASTRUCT
+{
+  ULONG_PTR dwData;
+  DWORD     cbData;
+  PVOID     lpData;
+} COPYDATASTRUCT, *PCOPYDATASTRUCT;
 
 
 #endif //_WDL_SWELL_H_TYPES_DEFINED_

@@ -51,6 +51,8 @@ class LICE_IFont
 };
 
 
+#ifndef LICE_TEXT_NO_DECLARE_CACHEDFONT
+
 class LICE_CachedFont : public LICE_IFont
 {
   public:
@@ -97,6 +99,7 @@ class LICE_CachedFont : public LICE_IFont
       int width, height;
       int advance;
       int charid; // used by m_extracharlist
+      int left_extra;
     };
     charEnt *findChar(unsigned short c);
 
@@ -109,5 +112,7 @@ class LICE_CachedFont : public LICE_IFont
     HFONT m_font;
 
 };
+
+#endif // !LICE_TEXT_NO_DECLARE_CACHEDFONT
 
 #endif//_LICE_TEXT_H_
