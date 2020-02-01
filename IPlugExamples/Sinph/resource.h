@@ -72,7 +72,7 @@
 
 // vst3 stuff
 #define MFR_URL "kring.co.uk"
-#define MFR_EMAIL "jacko@kring.co.uk"
+#define MFR_EMAIL "vst@kring.co.uk"
 #define EFFECT_TYPE_VST3 "Instrument|Synth"
 
 /* "Fx|Analyzer"", "Fx|Delay", "Fx|Distortion", "Fx|Dynamics", "Fx|EQ", "Fx|Filter",
