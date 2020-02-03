@@ -6,7 +6,7 @@
 #include "IKeyboardControl.h"
 
 
-const int kNumPrograms = 1;
+const int kNumPrograms = 128;
 
 #define PITCH 440.
 #define TABLE_SIZE 512
@@ -322,7 +322,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
         if (vs->GetBusy())
         {
-            output += mOsc->process(&vs->mOsc_ctx);// *mEnv->process(&vs->mEnv_ctx);
+            output += mOsc->process(&vs->mOsc_ctx) * mEnv->process(&vs->mEnv_ctx);
         }
       }
 
