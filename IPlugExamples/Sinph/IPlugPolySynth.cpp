@@ -6,7 +6,7 @@
 #include "IKeyboardControl.h"
 
 
-const int kNumPrograms = 8;
+const int kNumPrograms = 1;
 
 #define PITCH 440.
 #define TABLE_SIZE 512
@@ -19,12 +19,97 @@ const int kNumPrograms = 8;
 
 enum EParams
 {
-  kAttack = 0,
-  kDecay,
-  kSustain,
-  kRelease,
-  kNumParams
+    kAlgSelect = 0,
+    kModGain,
+    kNoise,
+    kUnison,
+
+    kFoot,
+    kEnvFreqMod,
+    kData,
+    kVolume,
+
+    kBalance,
+    kWarm,
+    kPanShapes,
+    kVelSens,
+
+    kEF1,
+    kEF2,
+    kEF3,
+    kEF4,
+
+    kF2,
+    kQ2,
+    kFB,
+    kF1,
+
+    kAttack,
+    kDecay,
+    kSustain,
+    kRelease,
+
+    kVF2,
+    kVQ2,
+    kVFB,
+    KVF1,
+
+    kMF2,
+    kMQ2,
+    kMFB,
+    kMF1,
+
+    kNumParams
 };
+
+char* kNames[kNumParams] = {
+    "Algorithm", "Modulation", "Noise", "Unison",
+    "Foot", "Bend", "Data", "Volume",
+    "Balance", "Warm", "Shape", "Vel Sens",
+    "FX1", "FX2", "FX3", "FX4",
+
+    "F2", "Q2", "FB", "F1",
+    "Attack", "Decay", "Sustain", "Release",
+    "VF2", "VQ2", "VFB", "VF1",
+    "MF2", "MQ2", "MFB", "MF1"
+};
+
+IParam::EParamType kTypes[kNumParams] = {
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble
+};
+
+enum EUses {
+    kTime = 0,
+    kPercent
+};
+
+EUses kUses[kNumParams] = {
+    kTime, kTime, kTime, kTime,
+    kTime, kTime, kTime, kTime,
+    kTime, kTime, kTime, kTime,
+    kTime, kTime, kTime, kTime,
+
+    kTime, kTime, kTime, kTime,
+    kTime, kTime, kPercent, kTime,
+    kTime, kTime, kTime, kTime,
+    kTime, kTime, kTime, kTime
+};
+
+int getX(int c) {
+    return 55 * ((c % 4) + 4 * (c / 16)) + 12;
+}
+
+int getY(int c) {
+    return 57 * ((c >> 2) & 3) + 16;
+}
 
 IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   : IPLUG_CTOR(kNumParams, kNumPrograms, instanceInfo),
@@ -49,12 +134,6 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
 
   memset(mKeyStatus, 0, 128 * sizeof(bool));
 
-  //arguments are: name, defaultVal, minVal, maxVal, step, label
-  GetParam(kAttack)->InitDouble("Amp Attack", ATTACK_DEFAULT, TIME_MIN, TIME_MAX, 0.001);
-  GetParam(kDecay)->InitDouble("Amp Decay", DECAY_DEFAULT, TIME_MIN, TIME_MAX, 0.001);
-  GetParam(kSustain)->InitDouble("Amp Sustain", 1., 0., 1., 0.001);
-  GetParam(kRelease)->InitDouble("Amp Release", RELEASE_DEFAULT, TIME_MIN, TIME_MAX, 0.001);
-
   IGraphics* pGraphics = MakeGraphics(this, kWidth, kHeight);
   pGraphics->AttachBackground(BG_ID, BG_FN);
 
@@ -62,6 +141,29 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   IText text = IText(14);
   IBitmap regular = pGraphics->LoadIBitmap(WHITE_KEY_ID, WHITE_KEY_FN, 6);
   IBitmap sharp   = pGraphics->LoadIBitmap(BLACK_KEY_ID, BLACK_KEY_FN);
+
+  for (int i = 0; i < kNumParams; ++i) {
+      switch (kTypes[i]) {
+      case IParam::kTypeDouble:
+          switch (kUses[i]) {
+          case kTime:
+              GetParam(i)->InitDouble(kNames[i],
+                  (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
+              break;
+          case kPercent:
+              GetParam(i)->InitDouble(kNames[i],
+                  50., 0., 100., 0.001, "%");
+              break;
+          default:
+              break;
+          }
+          pGraphics->AttachControl(
+              new IKnobMultiControl(this, getX(i), getY(i), i, &knob));
+          break;
+      default:
+          break;
+      }
+  }
 
   //                    C#     D#          F#      G#      A#
   int coords[12] = { 0, 7, 12, 20, 24, 36, 43, 48, 56, 60, 69, 72 };
@@ -220,7 +322,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
         if (vs->GetBusy())
         {
-          output += mOsc->process(&vs->mOsc_ctx) * mEnv->process(&vs->mEnv_ctx);
+            output += mOsc->process(&vs->mOsc_ctx);// *mEnv->process(&vs->mEnv_ctx);
         }
       }
 
@@ -232,9 +334,6 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
     mMidiQueue.Flush(nFrames);
   }
-//  else // empty block
-//  {
-//  }
 }
 
 void IPlugPolySynth::Reset()
@@ -260,7 +359,7 @@ void IPlugPolySynth::OnParamChange(int paramIdx)
       mEnv->setStageTime(kStageDecay, GetParam(kDecay)->Value());
       break;
     case kSustain:
-      mEnv->setSustainLevel( GetParam(kSustain)->Value() );
+      mEnv->setSustainLevel(GetParam(kSustain)->Value() / 100.);
       break;
     case kRelease:
       mEnv->setStageTime(kStageRelease, GetParam(kRelease)->Value());

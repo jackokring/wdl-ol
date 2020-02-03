@@ -6,9 +6,6 @@
 #include "IPlugPolySynthDSP.h"
 
 #define MAX_VOICES 16
-#define ATTACK_DEFAULT 5.
-#define DECAY_DEFAULT 20.
-#define RELEASE_DEFAULT 500.
 #define TIME_MIN 2.
 #define TIME_MAX 5000.
 
@@ -61,9 +58,7 @@ enum ELayout
   kKeybX = 1,
   kKeybY = 233,
 
-  kGainX = 100,
-  kGainY = 100,
-  kKnobFrames = 60
+  kKnobFrames = 31
 };
 
 #endif //__IPLUGPOLYSYNTH__

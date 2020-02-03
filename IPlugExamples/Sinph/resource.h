@@ -30,13 +30,13 @@
 #endif
 #define PLUG_MFR_PT "KRT\nKRT\nkrtl"
 #define PLUG_NAME_PT "Sinph\nSTYG"
-#define PLUG_TYPE_PT "Effect"
+#define PLUG_TYPE_PT "Synth"
 #define PLUG_DOES_AUDIOSUITE 0
 
 #if (defined(AAX_API) || defined(RTAS_API)) 
 #define PLUG_CHANNEL_IO "1-1 2-2"
 #else
-#define PLUG_CHANNEL_IO "0-1 0-2"
+#define PLUG_CHANNEL_IO "0-2"
 #endif
 
 #define PLUG_LATENCY 0
@@ -62,7 +62,7 @@
 #define BLACK_KEY_FN  "resources/img/bk.png"
 
 // GUI default dimensions
-#define GUI_WIDTH   700
+#define GUI_WIDTH   440
 #define GUI_HEIGHT  300
 
 // on MSVC, you must define SA_API in the resource editor preprocessor macros as well as the c++ ones
