@@ -73,7 +73,7 @@ public:
   void ProcessMidiMsg(IMidiMsg* pMsg);
   void NoteOnOff(IMidiMsg* pMsg);
 
-private:
+public:
 
   //void NoteOnOffPoly(IMidiMsg* pMsg);
   int FindFreeVoice();
@@ -97,6 +97,11 @@ private:
   double* mTable;
   IControl* dials[kNumParams];
   IControl* labels[kNumParams];
+};
+
+class Algorithm {
+public:
+    double process(IPlugPolySynth* ref, CVoiceState* vs);
 };
 
 enum ELayout

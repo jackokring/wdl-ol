@@ -29,18 +29,6 @@ char* kNames[kNumParams] = {
     "MF2", "MQ2", "MFB", "MF1"
 };
 
-IParam::EParamType kTypes[kNumParams] = {
-    IParam::kTypeInt, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble
-};
-
 enum EUses {
     uTime = 0,//double
     uPercent,//double
@@ -57,6 +45,22 @@ EUses kUses[kNumParams] = {
     uTime, uTime, uPercent, uTime,
     uTime, uTime, uTime, uTime,
     uTime, uTime, uTime, uTime
+};
+
+Algorithm sound[kAlgFrames] = {
+    Algorithm(),//default
+
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm(),
+    Algorithm(), Algorithm(), Algorithm()
 };
 
 int getX(int c) {
@@ -105,34 +109,22 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
           IText::kStyleNormal, IText::kAlignCenter, 0,
           IText::kQualityDefault);
       IBitmap* show = &knob;//default
-      switch (kTypes[i]) {
-      case IParam::kTypeDouble:
-          switch (kUses[i]) {
-          case uTime:
-              GetParam(i)->InitDouble(kNames[i],
-                  (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
-              break;
-          case uPercent:
-              GetParam(i)->InitDouble(kNames[i],
-                  50., 0., 100., 0.001, "%");
-              break;
-          default:
-              break;
-          }
-          break;
-      case IParam::kTypeInt:
-          switch (kUses[i]) {
-          case uAlgorithm:
-              show = &algKnob;//different knob
-              GetParam(i)->InitInt(kNames[i],
-                  0, 0, kKnobFrames - 1, "Alg");
-              break;
-          default:
-              break;
-          }
-          break;
+      switch (kUses[i]) {
+      case uTime:
+        GetParam(i)->InitDouble(kNames[i],
+            (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
+        break;
+      case uPercent:
+        GetParam(i)->InitDouble(kNames[i],
+            50., 0., 100., 0.001, "%");
+        break;;
+      case uAlgorithm:
+        show = &algKnob;//different knob
+        GetParam(i)->InitInt(kNames[i],
+            0, 0, kKnobFrames - 1, "Alg");
+        break;
       default:
-          break;
+        break;
       }
       pGraphics->AttachControl(
           dials[i] = new IKnobMultiControl(this, getX(i), getY(i), i, show));
@@ -235,6 +227,11 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
 
 }
 
+double Algorithm::process(IPlugPolySynth *ref, CVoiceState* vs) {
+    return ref->mOsc->process(&vs->mOsc_ctx) *
+        ref->mEnv->process(&vs->mEnv_ctx);
+}
+
 void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, int nFrames)
 {
   // Mutex is already locked for us
@@ -298,6 +295,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
       }
 
       output = 0.;
+      int alg = GetParam(0)->Int();
 
       for(int v = 0; v < MAX_VOICES; v++) // for each vs
       {
@@ -305,7 +303,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
         if (vs->GetBusy())
         {
-            output += mOsc->process(&vs->mOsc_ctx) * mEnv->process(&vs->mEnv_ctx);
+            output += sound[alg].process(this, vs);
         }
       }
 

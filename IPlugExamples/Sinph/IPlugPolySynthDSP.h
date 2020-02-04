@@ -2,6 +2,8 @@
 #ifndef __IPLUGPOLYSYNTHDSP__
 #define __IPLUGPOLYSYNTHDSP__
 
+//#include "IPlugPolySynth.h"
+
 const double ENV_VALUE_LOW = 0.000001; // -120dB
 const double ENV_VALUE_HIGH = 0.999;
 const double MIN_ENV_TIME_MS = 0.5;
