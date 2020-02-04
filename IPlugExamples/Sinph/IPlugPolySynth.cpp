@@ -139,7 +139,7 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   pGraphics->AttachBackground(BG_ID, BG_FN);
 
   IBitmap knob = pGraphics->LoadIBitmap(KNOB_ID, KNOB_FN, kKnobFrames);
-  IBitmap algKnob = pGraphics->LoadIBitmap(KNOB_ALG_ID, KNOB_ALG_FN, kKnobFrames);
+  IBitmap algKnob = pGraphics->LoadIBitmap(KNOB_ALG_ID, KNOB_ALG_FN, kAlgFrames);
   IBitmap regular = pGraphics->LoadIBitmap(WHITE_KEY_ID, WHITE_KEY_FN, 6);
   IBitmap sharp   = pGraphics->LoadIBitmap(BLACK_KEY_ID, BLACK_KEY_FN);
 
