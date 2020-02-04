@@ -87,20 +87,21 @@ IParam::EParamType kTypes[kNumParams] = {
 };
 
 enum EUses {
-    kTime = 0,
-    kPercent
+    uTime = 0,
+    uPercent,
+    uAlgorithm
 };
 
 EUses kUses[kNumParams] = {
-    kTime, kTime, kTime, kTime,
-    kTime, kTime, kTime, kTime,
-    kTime, kTime, kTime, kTime,
-    kTime, kTime, kTime, kTime,
+    uAlgorithm, uTime, uTime, uTime,
+    uTime, uTime, uTime, uTime,
+    uTime, uTime, uTime, uTime,
+    uTime, uTime, uTime, uTime,
 
-    kTime, kTime, kTime, kTime,
-    kTime, kTime, kPercent, kTime,
-    kTime, kTime, kTime, kTime,
-    kTime, kTime, kTime, kTime
+    uTime, uTime, uTime, uTime,
+    uTime, uTime, uPercent, uTime,
+    uTime, uTime, uTime, uTime,
+    uTime, uTime, uTime, uTime
 };
 
 int getX(int c) {
@@ -108,7 +109,7 @@ int getX(int c) {
 }
 
 int getY(int c) {
-    return 57 * ((c >> 2) & 3) + 16;
+    return 57 * ((c >> 2) & 3) + 10;
 }
 
 IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
@@ -138,31 +139,45 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   pGraphics->AttachBackground(BG_ID, BG_FN);
 
   IBitmap knob = pGraphics->LoadIBitmap(KNOB_ID, KNOB_FN, kKnobFrames);
-  IText text = IText(14);
+  IBitmap algKnob = pGraphics->LoadIBitmap(KNOB_ALG_ID, KNOB_ALG_FN, kKnobFrames);
   IBitmap regular = pGraphics->LoadIBitmap(WHITE_KEY_ID, WHITE_KEY_FN, 6);
   IBitmap sharp   = pGraphics->LoadIBitmap(BLACK_KEY_ID, BLACK_KEY_FN);
 
+  IText text[kNumParams];
+
   for (int i = 0; i < kNumParams; ++i) {
+      text[i] = IText(12, &COLOR_WHITE, "Tahoma",
+          IText::kStyleNormal, IText::kAlignCenter, 0,
+          IText::kQualityDefault);
+      IBitmap* show = &knob;//default
       switch (kTypes[i]) {
       case IParam::kTypeDouble:
           switch (kUses[i]) {
-          case kTime:
+          case uTime:
               GetParam(i)->InitDouble(kNames[i],
                   (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
               break;
-          case kPercent:
+          case uPercent:
               GetParam(i)->InitDouble(kNames[i],
                   50., 0., 100., 0.001, "%");
+              break;
+          case uAlgorithm:
+              show = &algKnob;//different knob
+              GetParam(i)->InitInt(kNames[i],
+                  0, 0, kKnobFrames - 1, "Alg");
               break;
           default:
               break;
           }
           pGraphics->AttachControl(
-              new IKnobMultiControl(this, getX(i), getY(i), i, &knob));
+              new IKnobMultiControl(this, getX(i), getY(i), i, show));
           break;
       default:
           break;
       }
+      IRECT rect(getX(i) - 8, getY(i) + 35, getX(i) + 40, getY(i) + 100);
+      pGraphics->AttachControl(
+          new ITextControl(this, rect, &text[i], kNames[i]));
   }
 
   //                    C#     D#          F#      G#      A#
