@@ -8,6 +8,52 @@
 #define MAX_VOICES 16
 #define TIME_MIN 2.
 #define TIME_MAX 5000.
+constexpr double semitone = 1.0594630943592952646;
+
+enum EParams
+{
+    kAlgSelect = 0,
+    kModGain,
+    kNoise,
+    kUnison,
+
+    kFoot,
+    kEnvFreqMod,
+    kData,
+    kVolume,
+
+    kBalance,
+    kWarm,
+    kPanShapes,
+    kVelSens,
+
+    kEF1,
+    kEF2,
+    kEF3,
+    kEF4,
+
+    kF2,
+    kQ2,
+    kFB,
+    kF1,
+
+    kAttack,
+    kDecay,
+    kSustain,
+    kRelease,
+
+    kVF2,
+    kVQ2,
+    kVFB,
+    KVF1,
+
+    kMF2,
+    kMQ2,
+    kMFB,
+    kMF1,
+
+    kNumParams
+};
 
 class IPlugPolySynth : public IPlug
 {
@@ -29,7 +75,7 @@ public:
 
 private:
 
-  void NoteOnOffPoly(IMidiMsg* pMsg);
+  //void NoteOnOffPoly(IMidiMsg* pMsg);
   int FindFreeVoice();
 
   IBitmapOverlayControl* mAboutBox;
@@ -43,11 +89,14 @@ private:
   bool mKeyStatus[128]; // array of on/off for each key
 
   double mSampleRate;
+  double bender = 0.0;
 
   CVoiceState mVS[MAX_VOICES];
   CWTOsc* mOsc;
   CADSREnvL* mEnv;
   double* mTable;
+  IControl* dials[kNumParams];
+  IControl* labels[kNumParams];
 };
 
 enum ELayout

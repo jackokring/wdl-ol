@@ -17,55 +17,10 @@ const int kNumPrograms = 128;
 
 #define GAIN_FACTOR 0.2;
 
-enum EParams
-{
-    kAlgSelect = 0,
-    kModGain,
-    kNoise,
-    kUnison,
-
-    kFoot,
-    kEnvFreqMod,
-    kData,
-    kVolume,
-
-    kBalance,
-    kWarm,
-    kPanShapes,
-    kVelSens,
-
-    kEF1,
-    kEF2,
-    kEF3,
-    kEF4,
-
-    kF2,
-    kQ2,
-    kFB,
-    kF1,
-
-    kAttack,
-    kDecay,
-    kSustain,
-    kRelease,
-
-    kVF2,
-    kVQ2,
-    kVFB,
-    KVF1,
-
-    kMF2,
-    kMQ2,
-    kMFB,
-    kMF1,
-
-    kNumParams
-};
-
 char* kNames[kNumParams] = {
-    "Algorithm", "Modulation", "Noise", "Unison",
-    "Foot", "Bend", "Data", "Volume",
-    "Balance", "Warm", "Shape", "Vel Sens",
+    "Alg", "Mod", "Noise", "Unison",
+    "Foot", "Bend", "Data", "Vol",
+    "Bal", "Warm", "Shape", "Vel",
     "FX1", "FX2", "FX3", "FX4",
 
     "F2", "Q2", "FB", "F1",
@@ -75,7 +30,7 @@ char* kNames[kNumParams] = {
 };
 
 IParam::EParamType kTypes[kNumParams] = {
-    IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
+    IParam::kTypeInt, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
     IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
     IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
     IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble, IParam::kTypeDouble,
@@ -87,9 +42,9 @@ IParam::EParamType kTypes[kNumParams] = {
 };
 
 enum EUses {
-    uTime = 0,
-    uPercent,
-    uAlgorithm
+    uTime = 0,//double
+    uPercent,//double
+    uAlgorithm//int
 };
 
 EUses kUses[kNumParams] = {
@@ -105,7 +60,7 @@ EUses kUses[kNumParams] = {
 };
 
 int getX(int c) {
-    return 55 * ((c % 4) + 4 * (c / 16)) + 12;
+    return 55 * ((c % 4) + 4 * (c / 16)) + 16;
 }
 
 int getY(int c) {
@@ -161,6 +116,12 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
               GetParam(i)->InitDouble(kNames[i],
                   50., 0., 100., 0.001, "%");
               break;
+          default:
+              break;
+          }
+          break;
+      case IParam::kTypeInt:
+          switch (kUses[i]) {
           case uAlgorithm:
               show = &algKnob;//different knob
               GetParam(i)->InitInt(kNames[i],
@@ -169,15 +130,15 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
           default:
               break;
           }
-          pGraphics->AttachControl(
-              new IKnobMultiControl(this, getX(i), getY(i), i, show));
           break;
       default:
           break;
       }
+      pGraphics->AttachControl(
+          dials[i] = new IKnobMultiControl(this, getX(i), getY(i), i, show));
       IRECT rect(getX(i) - 8, getY(i) + 35, getX(i) + 40, getY(i) + 100);
       pGraphics->AttachControl(
-          new ITextControl(this, rect, &text[i], kNames[i]));
+          labels[i] = new ITextControl(this, rect, &text[i], kNames[i]));
   }
 
   //                    C#     D#          F#      G#      A#
@@ -200,6 +161,11 @@ IPlugPolySynth::~IPlugPolySynth()
   delete mOsc;
   delete mEnv;
   delete [] mTable;
+  /* delete mKeyboard;
+  for (int i = 0; i < kNumParams; ++i) {
+      delete dials[i];
+      delete labels[i];
+  } */
 }
 
 int IPlugPolySynth::FindFreeVoice()
@@ -319,11 +285,13 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
             NoteOnOff(pMsg);
             break;
           }
-          case IMidiMsg::kPitchWheel:
+          /*case IMidiMsg::kPitchWheel:
           {
-            //TODO
+            //Do via bender processing by multiply freq by bender
             break;
-          }
+          } */
+          default:
+              break;
         }
 
         mMidiQueue.Remove();
@@ -388,6 +356,7 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
 {
   int status = pMsg->StatusMsg();
   int velocity = pMsg->Velocity();
+  IMidiMsg::EControlChangeMsg idx = pMsg->ControlChangeIdx();
   
   switch (status)
   {
@@ -405,6 +374,43 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
         mNumHeldKeys -= 1;
       }
       break;
+    case IMidiMsg::kControlChange:
+        //process control change
+        if(idx < 32) {
+            GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
+        }
+        else if (idx < 64) {
+            double current = GetParam(idx)->GetNormalized();
+            current += pMsg->ControlChange(idx) / 128.;
+            GetParam(idx)->SetNormalized(current);//14 bit controllers
+        }
+        else {
+            return;//no other handled
+            //Seem to be outdated by 14 bit use??
+            //6 on/off [64]-[69]
+            //10 general [70]-[79]
+            //4 buttons [80]-[83]
+            //Who knows [84]
+            //6 more general [85]-[90]
+            //5 FX levels [91]-[95]
+            //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
+            //Unassigned controllers [102]-[119]
+            //Specials [120]-[128] -- N.B. DO NOT USE!!!
+        }
+        dials[idx & 31]->SetDirty();
+        OnParamChange(idx & 31);//needs calling?
+        return;
+    case IMidiMsg::kPitchWheel:
+        //frequency multiplier
+        bender = pow(semitone, 2.0 * pMsg->PitchWheel());
+        return;
+    case IMidiMsg::kPolyAftertouch:
+        //pMsg->PolyAfterTouch();
+        //pMsg->NoteNumber();
+        return;
+    case IMidiMsg::kChannelAftertouch:
+        //pMsg->ChannelAfterTouch();
+        return;
     default:
       return; // if !note message, nothing gets added to the queue
   }
