@@ -9,6 +9,53 @@ const double ENV_VALUE_HIGH = 0.999;
 const double MIN_ENV_TIME_MS = 0.5;
 const double MAX_ENV_TIME_MS = 60000.;
 
+constexpr double semitone = 1.0594630943592952646;
+
+enum EParams
+{
+    kAlgSelect = 0,
+    kModGain,
+    kNoise,
+    kUnison,
+
+    kFoot,
+    kEnvFreqMod,
+    kData,
+    kVolume,
+
+    kBalance,
+    kWarm,
+    kPanShapes,
+    kVelSens,
+
+    kEF1,
+    kEF2,
+    kEF3,
+    kEF4,
+
+    kF2,
+    kQ2,
+    kFB,
+    kF1,
+
+    kAttack,
+    kDecay,
+    kSustain,
+    kRelease,
+
+    kVF2,
+    kVQ2,
+    kVFB,
+    KVF1,
+
+    kMF2,
+    kMQ2,
+    kMFB,
+    kMF1,
+
+    kNumParams
+};
+
 inline double midi2CPS(double pitch)
 {
   return 440. * pow(2., (pitch - 69.) / 12.);
@@ -86,7 +133,8 @@ public:
     mLUT = LUT;
   }
 
-  inline double process(CWTOscState* pState)
+  inline double process(CWTOscState* pState, double env,
+      double *params, double bender)
   {
     pState->mPhase = wrap(pState->mPhase, 0., 1.);
     const double output = lerp(pState->mPhase * mLUTSizeF, mLUT, mLUTSizeM);
@@ -177,7 +225,7 @@ public:
     mSampleRate = sr;
   }
 
-  inline double process(CADSREnvLState* pS)
+  inline double process(CADSREnvLState* pS, double *params)
   {
     double result = 0.;
 

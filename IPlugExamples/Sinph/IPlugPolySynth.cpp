@@ -228,8 +228,17 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
 }
 
 double Algorithm::process(IPlugPolySynth *ref, CVoiceState* vs) {
-    return ref->mOsc->process(&vs->mOsc_ctx) *
-        ref->mEnv->process(&vs->mEnv_ctx);
+    double env = ref->mEnv->process(&vs->mEnv_ctx, ref->oldParam);
+    return ref->mOsc->process(&vs->mOsc_ctx, env,
+        ref->oldParam, ref->bender) * env;
+}
+
+double Algorithm::makeLeft(double master) {
+    return master;
+}
+
+double Algorithm::andMakeRight(double master) {
+    return master;
 }
 
 void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, int nFrames)
@@ -264,6 +273,10 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
     double output;
     CVoiceState* vs;
 
+    for (int i = 0; i < kNumParams; ++i) {
+        deltaParam[i] = (newParam[i] - oldParam[i]) / (double)nFrames;
+    }
+
     for (int s = 0; s < nFrames; ++s)
     {
       while (!mMidiQueue.Empty())
@@ -295,7 +308,8 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
       }
 
       output = 0.;
-      int alg = GetParam(0)->Int();
+
+      int alg = oldParam[kAlgSelect];
 
       for(int v = 0; v < MAX_VOICES; v++) // for each vs
       {
@@ -309,11 +323,19 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
       output *= GAIN_FACTOR;
 
-      *out1++ = output;
-      *out2++ = output;
+      *out1++ = sound[alg].makeLeft(output);
+      *out2++ = sound[alg].andMakeRight(output);
+
+      for (int i = 0; i < kNumParams; ++i) {
+          oldParam[i]  += deltaParam[i];
+      }
     }
 
     mMidiQueue.Flush(nFrames);
+  }
+
+  for (int i = 0; i < kNumParams; ++i) {
+      oldParam[i] = newParam[i];
   }
 }
 
@@ -331,6 +353,22 @@ void IPlugPolySynth::OnParamChange(int paramIdx)
 {
   IMutexLock lock(this);
 
+  switch (kUses[paramIdx]) {
+  case uTime:
+      newParam[paramIdx] = GetParam(paramIdx)->Value();
+      break;
+  case uPercent:
+      newParam[paramIdx] = GetParam(paramIdx)->Value() / 100.;
+      break;
+  case uAlgorithm:
+      newParam[paramIdx] = GetParam(paramIdx)->Int();
+      break;
+  default:
+      break;
+  }
+
+
+  //DELETE LATER TODO:--
   switch (paramIdx)
   {
     case kAttack:
@@ -371,7 +409,7 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
         mKeyStatus[pMsg->NoteNumber()] = false;
         mNumHeldKeys -= 1;
       }
-      break;
+      return;
     case IMidiMsg::kControlChange:
         //process control change
         if(idx < 32) {
@@ -409,11 +447,13 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
     case IMidiMsg::kChannelAftertouch:
         //pMsg->ChannelAfterTouch();
         return;
+    case IMidiMsg::kProgramChange:
+        RestorePreset(pMsg->Program());//just in case
+        return;
     default:
       return; // if !note message, nothing gets added to the queue
   }
   
-
   mKeyboard->SetDirty();
   mMidiQueue.Add(pMsg);
 }
