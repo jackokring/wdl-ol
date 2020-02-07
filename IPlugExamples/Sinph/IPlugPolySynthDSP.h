@@ -53,6 +53,12 @@ enum EParams
     kMFB,
     kMF1,
 
+    kNumProcessed,//number of processed parameters
+    //"Dummies" follow as not checked or controllable by ...
+    kMIDIChan,
+    kEditWrite,
+
+    //For number of preset parameters
     kNumParams
 };
 
@@ -295,10 +301,12 @@ struct CVoiceState
   CADSREnvLState mEnv_ctx;
   //bool mLastBusy;
   int mKey;
+  int chan;
 
   CVoiceState()
   {
     mKey = -1;
+    chan = 1;
     //mLastBusy = false;
   }
 

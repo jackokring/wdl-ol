@@ -15,7 +15,7 @@ const int kNumPrograms = 128;
 #define M_PI 3.14159265
 #endif
 
-#define GAIN_FACTOR 0.2;
+#define GAIN_FACTOR 0.1;
 
 char* kNames[kNumParams] = {
     "Alg", "Mod", "Noise", "Unison",
@@ -26,25 +26,37 @@ char* kNames[kNumParams] = {
     "F2", "Q2", "FB", "F1",
     "Attack", "Decay", "Sustain", "Release",
     "VF2", "VQ2", "VFB", "VF1",
-    "MF2", "MQ2", "MFB", "MF1"
+    "MF2", "MQ2", "MFB", "MF1",
+
+    "",//Special at KNumProcessed
+
+    "Write", "Channel"
 };
 
 enum EUses {
-    uTime = 0,//double
+    uNul = 0,
+    uEdit,//no write back
+    uChan,//for midi?
+    uTime,//double
     uPercent,//double
     uAlgorithm//int
 };
 
 EUses kUses[kNumParams] = {
-    uAlgorithm, uTime, uTime, uTime,
-    uTime, uTime, uTime, uTime,
-    uTime, uTime, uTime, uTime,
-    uTime, uTime, uTime, uTime,
+    uAlgorithm, uNul, uNul, uNul,
+    uNul, uNul, uNul, uNul,
+    uNul, uNul, uNul, uNul,
+    uNul, uNul, uNul, uNul,
 
-    uTime, uTime, uTime, uTime,
+    uNul, uNul, uNul, uNul,
     uTime, uTime, uPercent, uTime,
-    uTime, uTime, uTime, uTime,
-    uTime, uTime, uTime, uTime
+    uNul, uNul, uNul, uNul,
+    uNul, uNul, uNul, uNul,
+
+    //And this step over
+    uNul,//kNumProcessed
+    //"Dummies"
+    uEdit, uChan
 };
 
 Algorithm sound[kAlgFrames] = {
@@ -109,28 +121,52 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
           IText::kStyleNormal, IText::kAlignCenter, 0,
           IText::kQualityDefault);
       IBitmap* show = &knob;//default
+      bool ok = true;
+      bool voids = false;
       switch (kUses[i]) {
       case uTime:
-        GetParam(i)->InitDouble(kNames[i],
-            (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
-        break;
+          GetParam(i)->InitDouble(kNames[i],
+              (TIME_MIN + TIME_MAX) / 2., TIME_MIN, TIME_MAX, 0.001, "ms");
+          break;
       case uPercent:
-        GetParam(i)->InitDouble(kNames[i],
-            50., 0., 100., 0.001, "%");
-        break;;
+          GetParam(i)->InitDouble(kNames[i],
+              50., 0., 100., 0.001, "%");
+          break;;
       case uAlgorithm:
-        show = &algKnob;//different knob
-        GetParam(i)->InitInt(kNames[i],
-            0, 0, kKnobFrames - 1, "Alg");
-        break;
+          show = &algKnob;//different knob
+          GetParam(i)->InitEnum(kNames[i],
+              0, kKnobFrames, "Alg");
+          break;
+      case uNul:
+          ok = false;
+          GetParam(i)->InitEnum(kNames[i], 0, 1, "N/A");
+          break;
+      case uEdit:
+          voids = true;
+          GetParam(i)->InitBool(kNames[i], false, "Allow");
+          break;
+      case uChan:
+          voids = true;
+          GetParam(i)->InitInt(kNames[i], 1, 1, 16, "Chan");
+          break;
       default:
-        break;
+          break;
       }
       pGraphics->AttachControl(
           dials[i] = new IKnobMultiControl(this, getX(i), getY(i), i, show));
-      IRECT rect(getX(i) - 8, getY(i) + 35, getX(i) + 40, getY(i) + 100);
-      pGraphics->AttachControl(
-          labels[i] = new ITextControl(this, rect, &text[i], kNames[i]));
+      if (!ok) {
+          dials[i]->GrayOut(true);
+      }
+      if (!voids) {
+          IRECT rect(getX(i) - 8, getY(i) + 35, getX(i) + 40, getY(i) + 100);
+          pGraphics->AttachControl(
+              labels[i] = new ITextControl(this, rect, &text[i], kNames[i]));
+      }
+      if(i < kNumProcessed)
+          for (int j = 0; j < 16; ++j) {//start with defaults
+          oldParam[j][i] = newParam[j][i] = GetParam(i)->Value();
+          bender[j] = 1.;//initial here as GNU syntax [ ... ]
+      }
   }
 
   //                    C#     D#          F#      G#      A#
@@ -196,6 +232,7 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
   int status = pMsg->StatusMsg();
   int velocity = pMsg->Velocity();
   int note = pMsg->NoteNumber();
+  int chan = pMsg->Channel();
 
   if (status == IMidiMsg::kNoteOn && velocity) // Note on
   {
@@ -204,6 +241,7 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
     mVS[v].mOsc_ctx.mPhaseIncr = (1./mSampleRate) * midi2CPS(note);
     mVS[v].mEnv_ctx.mLevel = (double) velocity / 127.;
     mVS[v].mEnv_ctx.mStage = kStageAttack;
+    mVS[v].chan = chan;//set channel
 
     mActiveVoices++;
   }
@@ -211,7 +249,7 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
   {
     for (v = 0; v < MAX_VOICES; v++)
     {
-      if (mVS[v].mKey == note)
+      if (mVS[v].mKey == note && mVS[v].chan == chan)
       {
         if (mVS[v].GetBusy())
         {
@@ -228,9 +266,10 @@ void IPlugPolySynth::NoteOnOff(IMidiMsg* pMsg)
 }
 
 double Algorithm::process(IPlugPolySynth *ref, CVoiceState* vs) {
-    double env = ref->mEnv->process(&vs->mEnv_ctx, ref->oldParam);
+    double env = ref->mEnv->process(&vs->mEnv_ctx,
+        ref->oldParam[vs->chan]);
     return ref->mOsc->process(&vs->mOsc_ctx, env,
-        ref->oldParam, ref->bender) * env;
+        ref->oldParam[vs->chan], ref->bender[vs->chan]) * env;
 }
 
 double Algorithm::makeLeft(double master) {
@@ -270,12 +309,12 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
     double* out1 = outputs[0];
     double* out2 = outputs[1];
 
-    double output;
+    double output[kAlgFrames] = { };
     CVoiceState* vs;
-
-    for (int i = 0; i < kNumParams; ++i) {
-        deltaParam[i] = (newParam[i] - oldParam[i]) / (double)nFrames;
-    }
+    for(int j = 0; j < 16; ++j) 
+        for (int i = 0; i < kNumProcessed; ++i) {
+            deltaParam[j][i] = (newParam[j][i] - oldParam[j][i]) / (double)nFrames;
+        }
 
     for (int s = 0; s < nFrames; ++s)
     {
@@ -284,32 +323,9 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
         IMidiMsg* pMsg = mMidiQueue.Peek();
 
         if (pMsg->mOffset > s) break;
-
-        int status = pMsg->StatusMsg(); // get the MIDI status byte
-
-        switch (status)
-        {
-          case IMidiMsg::kNoteOn:
-          case IMidiMsg::kNoteOff:
-          {
-            NoteOnOff(pMsg);
-            break;
-          }
-          /*case IMidiMsg::kPitchWheel:
-          {
-            //Do via bender processing by multiply freq by bender
-            break;
-          } */
-          default:
-              break;
-        }
-
+        NoteOnOff(pMsg);
         mMidiQueue.Remove();
       }
-
-      output = 0.;
-
-      int alg = oldParam[kAlgSelect];
 
       for(int v = 0; v < MAX_VOICES; v++) // for each vs
       {
@@ -317,26 +333,32 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
         if (vs->GetBusy())
         {
-            output += sound[alg].process(this, vs);
+            int alg = oldParam[vs->chan][kAlgSelect];
+            output[alg] += sound[alg].process(this, vs);
         }
       }
 
-      output *= GAIN_FACTOR;
-
-      *out1++ = sound[alg].makeLeft(output);
-      *out2++ = sound[alg].andMakeRight(output);
-
-      for (int i = 0; i < kNumParams; ++i) {
-          oldParam[i]  += deltaParam[i];
+      for (int i = 0; i < kAlgFrames; ++i) {
+          *out1 += sound[i].makeLeft(output[i]);
+          *out2 += sound[i].andMakeRight(output[i]);
       }
+
+      *out1++ *= GAIN_FACTOR;
+      *out2++ *= GAIN_FACTOR;
+
+      for (int j = 0; j < 16; ++j)
+          for (int i = 0; i < kNumProcessed; ++i) {
+              oldParam[j][i]  += deltaParam[j][i];
+          }
     }
 
     mMidiQueue.Flush(nFrames);
   }
 
-  for (int i = 0; i < kNumParams; ++i) {
-      oldParam[i] = newParam[i];
-  }
+  for (int j = 0; j < 16; ++j)
+      for (int i = 0; i < kNumProcessed; ++i) {
+          oldParam[j][i] = newParam[j][i];
+      }
 }
 
 void IPlugPolySynth::Reset()
@@ -352,17 +374,23 @@ void IPlugPolySynth::Reset()
 void IPlugPolySynth::OnParamChange(int paramIdx)
 {
   IMutexLock lock(this);
+  double* param = &newParam[currentChan][paramIdx];
 
   switch (kUses[paramIdx]) {
   case uTime:
-      newParam[paramIdx] = GetParam(paramIdx)->Value();
+      *param = GetParam(paramIdx)->Value();
       break;
   case uPercent:
-      newParam[paramIdx] = GetParam(paramIdx)->Value() / 100.;
+      *param = GetParam(paramIdx)->Value() / 100.;
       break;
   case uAlgorithm:
-      newParam[paramIdx] = GetParam(paramIdx)->Int();
+      *param = GetParam(paramIdx)->Int();
       break;
+  case uNul:
+      *param = 0.;
+      break;
+  case uEdit://not controllable
+  case uChan:
   default:
       break;
   }
@@ -393,64 +421,88 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
   int status = pMsg->StatusMsg();
   int velocity = pMsg->Velocity();
   IMidiMsg::EControlChangeMsg idx = pMsg->ControlChangeIdx();
+  int chan = pMsg->Channel();
+  double val;
   
   switch (status)
   {
-    case IMidiMsg::kNoteOn:
-    case IMidiMsg::kNoteOff:
+  case IMidiMsg::kNoteOn:
+  case IMidiMsg::kNoteOff:
       // filter only note messages
       if (status == IMidiMsg::kNoteOn && velocity)
       {
-        mKeyStatus[pMsg->NoteNumber()] = true;
-        mNumHeldKeys += 1;
+          mKeyStatus[pMsg->NoteNumber()] = true;
+          mNumHeldKeys += 1;
       }
       else
       {
-        mKeyStatus[pMsg->NoteNumber()] = false;
-        mNumHeldKeys -= 1;
+          mKeyStatus[pMsg->NoteNumber()] = false;
+          mNumHeldKeys -= 1;
+      }
+      break;//only add notes
+  case IMidiMsg::kControlChange:
+      //process control change
+      if (idx < 32) {
+          val = GetParam(idx)->Value();
+          GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
+      }
+      else if (idx < 64) {
+          idx = (IMidiMsg::EControlChangeMsg)(idx & 31);
+          val = GetParam(idx)->Value();
+          double current = GetParam(idx)->GetNormalized();
+          current += pMsg->ControlChange(idx) / 128.;
+          GetParam(idx)->SetNormalized(current);//14 bit controllers
+      }
+      else {
+          idx = (IMidiMsg::EControlChangeMsg)(idx - 32);//to control
+          return;//no other handled
+          //Seem to be outdated by 14 bit use??
+          //6 on/off [64]-[69]
+          //10 general [70]-[79]
+          //4 buttons [80]-[83]
+          //Who knows [84]
+          //6 more general [85]-[90]
+          //5 FX levels [91]-[95]
+          //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
+          //Unassigned controllers [102]-[119]
+          //Specials [120]-[128] -- N.B. DO NOT USE!!!
+      }
+      if (idx < kNumProcessed) {
+          newParam[chan][idx] = GetParam(idx)->Value();
+      }
+      if (chan == currentChan) {
+          dials[idx]->SetDirty();
+          InformHostOfParamChange(idx, GetParam(idx)->GetNormalized());
+      } else {
+          GetParam(idx)->Set(val);//restore
       }
       return;
-    case IMidiMsg::kControlChange:
-        //process control change
-        if(idx < 32) {
-            GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
-        }
-        else if (idx < 64) {
-            double current = GetParam(idx)->GetNormalized();
-            current += pMsg->ControlChange(idx) / 128.;
-            GetParam(idx)->SetNormalized(current);//14 bit controllers
-        }
-        else {
-            return;//no other handled
-            //Seem to be outdated by 14 bit use??
-            //6 on/off [64]-[69]
-            //10 general [70]-[79]
-            //4 buttons [80]-[83]
-            //Who knows [84]
-            //6 more general [85]-[90]
-            //5 FX levels [91]-[95]
-            //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
-            //Unassigned controllers [102]-[119]
-            //Specials [120]-[128] -- N.B. DO NOT USE!!!
-        }
-        dials[idx & 31]->SetDirty();
-        OnParamChange(idx & 31);//needs calling?
-        return;
-    case IMidiMsg::kPitchWheel:
-        //frequency multiplier
-        bender = pow(semitone, 2.0 * pMsg->PitchWheel());
-        return;
-    case IMidiMsg::kPolyAftertouch:
-        //pMsg->PolyAfterTouch();
-        //pMsg->NoteNumber();
-        return;
-    case IMidiMsg::kChannelAftertouch:
-        //pMsg->ChannelAfterTouch();
-        return;
-    case IMidiMsg::kProgramChange:
-        RestorePreset(pMsg->Program());//just in case
-        return;
-    default:
+  case IMidiMsg::kPitchWheel:
+      //frequency multiplier
+      bender[chan] = pow(semitone, 2.0 * pMsg->PitchWheel());
+      return;
+  case IMidiMsg::kPolyAftertouch:
+      //pMsg->PolyAfterTouch();
+      //pMsg->NoteNumber();
+      return;
+  case IMidiMsg::kChannelAftertouch:
+      //pMsg->ChannelAfterTouch();
+      return;
+  case IMidiMsg::kProgramChange:
+      if (hackEdit) {
+          RestorePreset(programs[chan]);
+          ModifyCurrentPreset();//save current
+      }
+      RestorePreset(programs[chan] = pMsg->Program());//just in case
+      for (int i = 0; i < kNumProcessed; ++i) {
+          newParam[chan][i] = GetParam(i)->Value();
+      }
+      for (int i = 0; i < kNumProcessed; ++i) {
+          GetParam(i)->Set(newParam[currentChan][i]);
+      }
+      DirtyParameters();
+      return;
+  default:
       return; // if !note message, nothing gets added to the queue
   }
   

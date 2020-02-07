@@ -43,7 +43,7 @@ public:
   bool mKeyStatus[128]; // array of on/off for each key
 
   double mSampleRate;
-  double bender = 1.0;//as MUL relative not additive
+  double bender[16];//as MUL relative not additive
 
   CVoiceState mVS[MAX_VOICES];
   CWTOsc* mOsc;
@@ -52,16 +52,19 @@ public:
   IControl* dials[kNumParams];
   IControl* labels[kNumParams];
 
-  double oldParam[kNumParams] = { };
-  double newParam[kNumParams] = { };
-  double deltaParam[kNumParams] = { };
+  double oldParam[16][kNumProcessed] = { };
+  double newParam[16][kNumProcessed] = { };
+  double deltaParam[16][kNumProcessed] = { };
+  int currentChan = 1;
+  bool hackEdit = false;
+  int programs[16] = { };
 };
 
 class Algorithm {
 public:
-    double process(IPlugPolySynth* ref, CVoiceState* vs);
-    double makeLeft(double master);
-    double andMakeRight(double master);
+    virtual double process(IPlugPolySynth* ref, CVoiceState* vs);
+    virtual double makeLeft(double master);
+    virtual double andMakeRight(double master);
 };
 
 enum ELayout
