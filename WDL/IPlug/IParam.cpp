@@ -11,6 +11,7 @@ IParam::IParam()
   , mNegateDisplay(false)
   , mShape(1.0)
   , mCanAutomate(true)
+  , mCanSave(true)
   , mDefault(0.)
   , mIsMeta(false)
 {

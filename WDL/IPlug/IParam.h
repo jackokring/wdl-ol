@@ -37,6 +37,7 @@ public:
   void Set(double value) { mValue = BOUNDED(value, mMin, mMax); }
   void SetDisplayText(int value, const char* text);
   void SetCanAutomate(bool canAutomate) { mCanAutomate = canAutomate; }
+  void SetCanSave(bool canSave) { mCanSave = canSave; }
   // The higher the shape, the more resolution around host value zero.
   void SetShape(double shape);
   void SetIsMeta(bool meta) { mIsMeta = meta; }
@@ -82,6 +83,7 @@ public:
   const double GetRange() {return mMax - mMin;}
   const int GetPrecision() {return mDisplayPrecision;}
   bool GetCanAutomate() { return mCanAutomate; }
+  bool GetCanSave() { return mCanSave; }
   bool GetIsMeta() { return mIsMeta; }
 
 private:
@@ -96,6 +98,7 @@ private:
   bool mNegateDisplay;
   bool mSignDisplay;
   bool mCanAutomate;
+  bool mCanSave;
   bool mIsMeta;
   
   struct DisplayText
