@@ -33,6 +33,7 @@ enum EParams
     kEF3,
     kEF4,
 
+    //Second block of 16 (14 bit controllers)
     kF2,
     kQ2,
     kFB,
@@ -53,9 +54,52 @@ enum EParams
     kMFB,
     kMF1,
 
+    //Third block of 16 (7 bit controllers)
+    kSW1,
+    KSW2,
+    kSW3,
+    KSW4,
+
+    kSW5,
+    KSW6,
+    kP1,
+    kP2,
+
+    kP3,
+    kP4,
+    kP5,
+    kP6,
+
+    kP7,
+    kP8,
+    kP9,
+    kP10,
+
+    //and switches
+    kSW7,
+    kSW8,
+    KSW9,
+    kSW10,
+
+    //C# D# F# G# A# (for sliders)
+    kNC,
+    kNC_,
+    kND,
+    kND_,
+
+    kNE,
+    kNF,
+    kNF_,
+    kNG,
+
+    kNG_,
+    kNA,
+    kNA_,
+    kNB,
+
     kNumProcessed,//number of processed parameters
     //"Dummies" follow as not checked or controllable by ...
-    kMIDIChan,
+    kMIDIChan = kNumProcessed,//to not miss one
     kEditWrite,
 
     //For number of preset parameters

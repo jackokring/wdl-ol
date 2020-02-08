@@ -76,7 +76,9 @@ enum ELayout
   kKeybY = 233,
 
   kKnobFrames = 256,
-  kAlgFrames = 31
+  kAlgFrames = 31,
+  kSwitchFrames = 16,
+  kSliderFrames = 256
 };
 
 #endif //__IPLUGPOLYSYNTH__

@@ -28,13 +28,27 @@ char* kNames[kNumParams] = {
     "VF2", "VQ2", "VFB", "VF1",
     "MF2", "MQ2", "MFB", "MF1",
 
-    "",//Special at KNumProcessed
+    "S1", "S2", "S3", "S4",
+    "S5", "S6", "P1", "P2",
+    "P3", "P4", "P5", "P6",
+    "P7", "P8", "P9", "P10",
 
+    //switches
+    "S7", "S8", "S9", "S10",
+
+    //Notes C# D# F# G# A# (for sliders)
+    "C", "C#", "D", "D#",
+    "E", "F", "F#", "G",
+    "G#", "A", "A#", "B",
+
+    //Special at KNumProcessed
     "Write", "Channel"
 };
 
 enum EUses {
     uNul = 0,
+    uNulSW,
+    uNulSL,
     uEdit,//no write back
     uChan,//for midi?
     uTime,//double
@@ -53,8 +67,20 @@ EUses kUses[kNumParams] = {
     uNul, uNul, uNul, uNul,
     uNul, uNul, uNul, uNul,
 
-    //And this step over
-    uNul,//kNumProcessed
+    //third block
+    uNulSW, uNulSW, uNulSW, uNulSW,
+    uNulSW, uNulSW, uNul, uNul,
+    uNul, uNul, uNul, uNul,
+    uNul, uNul, uNul, uNul,
+
+    //switches
+    uNulSW, uNulSW, uNulSW, uNulSW,
+
+    //notes
+    uNulSL, uNulSL, uNulSL, uNulSL,
+    uNulSL, uNulSL, uNulSL, uNulSL,
+    uNulSL, uNulSL, uNulSL, uNulSL,
+
     //"Dummies"
     uEdit, uChan
 };
@@ -76,10 +102,23 @@ Algorithm sound[kAlgFrames] = {
 };
 
 int getX(int c) {
+    if (c > 47) {
+        if (c > 51) {
+            c -= 52;
+            return getX(c % 4 + 16 * (c / 4));//for sliders
+        }
+        return getX(c - 4);//for extra switches
+    }
     return 55 * ((c % 4) + 4 * (c / 16)) + 16;
 }
 
 int getY(int c) {
+    if (c > 47) {
+        if (c > 51) {
+            return getY(51) + 71;//for sliders
+        }
+        return getY(c - 4) + 57;//for extra switches
+    }
     return 57 * ((c >> 2) & 3) + 10;
 }
 
@@ -111,6 +150,9 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
 
   IBitmap knob = pGraphics->LoadIBitmap(KNOB_ID, KNOB_FN, kKnobFrames);
   IBitmap algKnob = pGraphics->LoadIBitmap(KNOB_ALG_ID, KNOB_ALG_FN, kAlgFrames);
+  IBitmap switchKnob = pGraphics->LoadIBitmap(SWITCH_ID, SWITCH_FN, kSwitchFrames);
+  IBitmap sliderKnob = pGraphics->LoadIBitmap(SLIDER_ID, SLIDER_FN, kSliderFrames);
+
   IBitmap regular = pGraphics->LoadIBitmap(WHITE_KEY_ID, WHITE_KEY_FN, 6);
   IBitmap sharp   = pGraphics->LoadIBitmap(BLACK_KEY_ID, BLACK_KEY_FN);
 
@@ -140,6 +182,16 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
       case uNul:
           ok = false;
           GetParam(i)->InitEnum(kNames[i], 0, 1, "N/A");
+          break;
+      case uNulSW:
+          ok = false;
+          show = &switchKnob;
+          GetParam(i)->InitEnum(kNames[i], 0, 16, "N/A");
+          break;
+      case uNulSL:
+          ok = false;
+          show = &sliderKnob;
+          GetParam(i)->InitEnum(kNames[i], 128, 256, "N/A");
           break;
       case uEdit:
           voids = true;
@@ -337,6 +389,9 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
             output[alg] += sound[alg].process(this, vs);
         }
       }
+
+      *out1 = 0.;
+      *out2 = 0.;
 
       for (int i = 0; i < kAlgFrames; ++i) {
           *out1 += sound[i].makeLeft(output[i]);

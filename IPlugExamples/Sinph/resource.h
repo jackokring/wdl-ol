@@ -54,6 +54,8 @@
 #define WHITE_KEY_ID  104
 #define BLACK_KEY_ID  105
 #define KNOB_ALG_ID   106
+#define SWITCH_ID     107
+#define SLIDER_ID     108
 
 // Image resource locations for this plug.
 #define KNOB_FN       "resources/img/knob.png"
@@ -62,10 +64,12 @@
 #define WHITE_KEY_FN  "resources/img/wk.png"
 #define BLACK_KEY_FN  "resources/img/bk.png"
 #define KNOB_ALG_FN   "resources/img/alg-knob.png"
+#define SWITCH_FN     "resources/img/switch.png"
+#define SLIDER_FN     "resources/img/slider.png"
 
 // GUI default dimensions
-#define GUI_WIDTH   440
-#define GUI_HEIGHT  300
+#define GUI_WIDTH   670
+#define GUI_HEIGHT  420
 
 // on MSVC, you must define SA_API in the resource editor preprocessor macros as well as the c++ ones
 #if defined(SA_API) && !defined(OS_IOS)
