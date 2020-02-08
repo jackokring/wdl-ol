@@ -41,6 +41,9 @@ char* kNames[kNumParams] = {
     "E", "F", "F#", "G",
     "G#", "A", "A#", "B",
 
+    //Upto the special controllers for parameter entry
+    //And if used these will come later
+
     //Special at KNumProcessed
     "Write", "Channel"
 };
@@ -509,27 +512,31 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
           GetParam(idx)->SetNormalized(current);//14 bit controllers
       }
       else {
-          idx = (IMidiMsg::EControlChangeMsg)(idx - 32);//to control
-          return;//no other handled
+          idx = (IMidiMsg::EControlChangeMsg)(idx - 16);//to control
+          val = GetParam(idx)->Value();
+          GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
           //Seem to be outdated by 14 bit use??
           //6 on/off [64]-[69]
           //10 general [70]-[79]
           //4 buttons [80]-[83]
-          //Who knows [84]
-          //6 more general [85]-[90]
-          //5 FX levels [91]-[95]
+          //Who knows the 12 notes? [84]-[95]
+          /* UPTO HERE <--------------
+            Plus 2 extras for MIDI chan and edit
+          ------------------------> */
+
           //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
           //Unassigned controllers [102]-[119]
           //Specials [120]-[128] -- N.B. DO NOT USE!!!
       }
       if (idx < kNumProcessed) {
           newParam[chan][idx] = GetParam(idx)->Value();
-      }
-      if (chan == currentChan) {
-          dials[idx]->SetDirty();
-          InformHostOfParamChange(idx, GetParam(idx)->GetNormalized());
-      } else {
-          GetParam(idx)->Set(val);//restore
+          if (chan == currentChan) {
+              dials[idx]->SetDirty();
+              InformHostOfParamChange(idx, GetParam(idx)->GetNormalized());
+          }
+          else {
+              GetParam(idx)->Set(val);//restore
+          }
       }
       return;
   case IMidiMsg::kPitchWheel:
