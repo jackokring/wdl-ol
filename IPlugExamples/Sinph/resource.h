@@ -57,6 +57,7 @@
 #define SWITCH_ID     107
 #define SLIDER_ID     108
 #define MIDI_ID       109
+#define TWO_STATE_ID  110
 
 // Image resource locations for this plug.
 #define KNOB_FN       "resources/img/knob.png"
@@ -67,7 +68,8 @@
 #define KNOB_ALG_FN   "resources/img/alg-knob.png"
 #define SWITCH_FN     "resources/img/switch.png"
 #define SLIDER_FN     "resources/img/slider.png"
-#define MIDI_FN     "resources/img/midi.png"
+#define MIDI_FN       "resources/img/midi.png"
+#define TWO_STATE_FN  "resources/img/2state.png"
 
 // GUI default dimensions
 #define GUI_WIDTH   670
