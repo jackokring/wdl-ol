@@ -571,6 +571,7 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
           GetParam(i)->Set(newParam[currentChan][i]);
       }
       DirtyParameters();
+      PresetsChangedByHost();
       RedrawParamControls();
       return;
   default:
