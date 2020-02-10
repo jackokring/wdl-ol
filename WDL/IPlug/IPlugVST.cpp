@@ -590,7 +590,8 @@ VstIntPtr VSTCALLBACK IPlugVST::VSTDispatcher(AEffect *pEffect, VstInt32 opCode,
     }
     case effCanBeAutomated:
     {
-      return 1;
+      IParam* pParam = _this->GetParam(idx);
+      return pParam->CanAutomate();//stop change
     }
     case effGetInputProperties:
     {
@@ -782,10 +783,10 @@ VstIntPtr VSTCALLBACK IPlugVST::VSTDispatcher(AEffect *pEffect, VstInt32 opCode,
     }
     case effSetProgram:
     {
-      if (_this->DoesStateChunks() == false)
+      /* if (_this->DoesStateChunks() == false)
       {
         _this->ModifyCurrentPreset(); // TODO: test, something is funny about this http://forum.cockos.com/showpost.php?p=485113&postcount=22
-      }
+      } */
       _this->RestorePreset((int) value);
       return 0;
     }
@@ -901,6 +902,8 @@ void VSTCALLBACK IPlugVST::VSTSetParameter(AEffect *pEffect, VstInt32 idx, float
   IMutexLock lock(_this);
   if (idx >= 0 && idx < _this->NParams())
   {
+    IParam* pParam = _this->GetParam(idx);
+    if(!pParam->CanAutomate()) return;
     if (_this->GetGUI())
     {
       _this->GetGUI()->SetParameterFromPlug(idx, value, true);
