@@ -40,7 +40,7 @@ public:
   int mActiveVoices;
   int mKey;
   int mNumHeldKeys;
-  bool mKeyStatus[128]; // array of on/off for each key
+  bool mKeyStatus[16][128]; // array of on/off for each key
 
   double mSampleRate;
   double bender[16];//as MUL relative not additive
@@ -55,7 +55,7 @@ public:
   double oldParam[16][kNumProcessed] = { };
   double newParam[16][kNumProcessed] = { };
   double deltaParam[16][kNumProcessed] = { };
-  int currentChan = 1;
+  int currentChan = 0;//offset 0-15 for 1-16
   bool hackEdit = false;
   int programs[16] = { };
 };
@@ -72,7 +72,7 @@ enum ELayout
   kWidth = GUI_WIDTH,  // width of plugin window
   kHeight = GUI_HEIGHT, // height of plugin window
 
-  kKeybX = 1,
+  kKeybX = 9,
   kKeybY = 233,
 
   kKnobFrames = 256,

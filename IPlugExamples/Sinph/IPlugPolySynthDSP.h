@@ -20,13 +20,13 @@ enum EParams
 
     kFoot,
     kEnvFreqMod,
-    kData,
+    kPolyAfterSend,
     kVolume,
 
     kBalance,
-    kWarm,
+    kWarmShape,
     kPanShapes,
-    kVelSens,
+    kExpression,
 
     kEF1,
     kEF2,
@@ -36,8 +36,8 @@ enum EParams
     //Second block of 16 (14 bit controllers)
     kF2,
     kQ2,
-    kFB,
     kF1,
+    kInvert,
 
     kAttack,
     kDecay,
@@ -46,28 +46,28 @@ enum EParams
 
     kVF2,
     kVQ2,
-    kVFB,
-    KVF1,
+    kVF1,
+    KVInvert,
 
     kMF2,
     kMQ2,
-    kMFB,
     kMF1,
+    kMInvert,
 
     //Third block of 16 (7 bit controllers)
-    kSW1,
-    KSW2,
-    kSW3,
-    KSW4,
+    kHold,
+    KPortoOnOff,
+    kSustenuto,
+    KSoft,
 
-    kSW5,
-    KSW6,
-    kP1,
-    kP2,
+    kLegato,
+    KHold2Decays,
+    kVariation,
+    kTimbre,
 
-    kP3,
-    kP4,
-    kP5,
+    kRelease2,
+    kAttack2,
+    kBrightness,
     kP6,
 
     kP7,
@@ -76,10 +76,10 @@ enum EParams
     kP10,
 
     //and switches
-    kSW7,
-    kSW8,
-    KSW9,
-    kSW10,
+    kSW1,
+    kSW2,
+    KSW3,
+    kSW4,
 
     //C# D# F# G# A# (for sliders)
     kNC,

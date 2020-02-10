@@ -37,7 +37,7 @@ public:
   void Set(double value) { mValue = BOUNDED(value, mMin, mMax); }
   void SetDisplayText(int value, const char* text);
   void SetCanAutomate(bool canAutomate) { mCanAutomate = canAutomate; }
-  void SetCanSave(bool canSave) { mCanSave = canSave; }
+  void SetCanSave(bool canSave) { mCanSave = canSave; SetCanAutomate(false);  }
   // The higher the shape, the more resolution around host value zero.
   void SetShape(double shape);
   void SetIsMeta(bool meta) { mIsMeta = meta; }

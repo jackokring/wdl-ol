@@ -261,6 +261,7 @@
     <ClInclude Include="IControl.h" />
     <ClInclude Include="IGraphics.h" />
     <ClInclude Include="IGraphicsWin.h" />
+    <ClInclude Include="IKeyboardControl.h" />
     <ClInclude Include="IParam.h" />
     <ClInclude Include="IPlugBase.h" />
     <ClInclude Include="IPlugOSDetect.h" />

@@ -18,23 +18,23 @@ const int kNumPrograms = 128;
 #define GAIN_FACTOR 0.1;
 
 char* kNames[kNumParams] = {
-    "Alg", "Mod", "Noise", "Unison",
-    "Foot", "Bend", "Data", "Vol",
-    "Bal", "Warm", "Shape", "Vel",
-    "FX1", "FX2", "FX3", "FX4",
+    "Algorithm", "Modulation", "Noise", "Unison",
+    "Foot", "Env Bend", "Polytouch", "Volume",
+    "Balance", "Warm", "Pan Warm", "Expression",
+    "FX1", "FX2", "?", "?",
 
-    "F2", "Q2", "FB", "F1",
+    "F2", "Q2", "F1", "Invert",
     "Attack", "Decay", "Sustain", "Release",
-    "VF2", "VQ2", "VFB", "VF1",
-    "MF2", "MQ2", "MFB", "MF1",
+    "Vel F2", "Vel Q2", "Vel F1", "Vel Invert",
+    "Env F2", "Env Q2", "Env F1", "Env Invert",
 
-    "S1", "S2", "S3", "S4",
-    "S5", "S6", "P1", "P2",
-    "P3", "P4", "P5", "P6",
+    "Hold", "Porto", "Sustenuto", "Soft",
+    "Legato", "Hold 2", "Variation", "Timbre",
+    "Release 2", "Attack 2", "Brightness", "P6",
     "P7", "P8", "P9", "P10",
 
     //switches
-    "S7", "S8", "S9", "S10",
+    "S1", "S2", "S3", "S4",
 
     //Notes C# D# F# G# A# (for sliders)
     "C", "C#", "D", "D#",
@@ -118,9 +118,9 @@ int getX(int c) {
 int getY(int c) {
     if (c > 47) {
         if (c > 51) {
-            return getY(51) + 71;//for sliders
+            return getY(51) + 63;//for sliders
         }
-        return getY(c - 4) + 57;//for extra switches
+        return getY(c - 4) + 60;//for extra switches
     }
     return 57 * ((c >> 2) & 3) + 10;
 }
@@ -146,7 +146,7 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   mOsc = new CWTOsc(mTable, TABLE_SIZE);
   mEnv = new CADSREnvL();
 
-  memset(mKeyStatus, 0, 128 * sizeof(bool));
+  memset(mKeyStatus, 0, 128 * 16 * sizeof(bool));
 
   IGraphics* pGraphics = MakeGraphics(this, kWidth, kHeight);
   pGraphics->AttachBackground(BG_ID, BG_FN);
@@ -168,6 +168,7 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
       IBitmap* show = &knob;//default
       bool ok = true;
       bool voids = false;
+      int yOff = 0;
       switch (kUses[i]) {
       case uTime:
           GetParam(i)->InitDouble(kNames[i],
@@ -194,8 +195,10 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
       case uNulSL:
           ok = false;
           show = &sliderKnob;
+          yOff = 65;
           GetParam(i)->InitEnum(kNames[i], 128, 256, "N/A");
           break;
+          //MIDI select and edit
       case uEdit:
           voids = true;
           GetParam(i)->InitBool(kNames[i], false, "Allow");
@@ -213,14 +216,18 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
           dials[i]->GrayOut(true);
       }
       if (!voids) {
-          IRECT rect(getX(i) - 8, getY(i) + 35, getX(i) + 40, getY(i) + 100);
+          IRECT rect(getX(i) - 8, getY(i) + 35 + yOff,
+              getX(i) + 40, getY(i) + 100 + yOff);
           pGraphics->AttachControl(
               labels[i] = new ITextControl(this, rect, &text[i], kNames[i]));
       }
       if(i < kNumProcessed)
           for (int j = 0; j < 16; ++j) {//start with defaults
-          oldParam[j][i] = newParam[j][i] = GetParam(i)->Value();
-          bender[j] = 1.;//initial here as GNU syntax [ ... ]
+              oldParam[j][i] = newParam[j][i] = GetParam(i)->Value();
+              bender[j] = 1.;//initial here as GNU syntax [ ... ]
+          }
+      else {
+          GetParam(i)->SetCanSave(false);
       }
   }
 
@@ -346,7 +353,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
     if (mKey >= 0)
     {
-      msg.MakeNoteOffMsg(mKey + 48, 0, 0);
+      msg.MakeNoteOffMsg(mKey + 48, 0, currentChan);
       mMidiQueue.Add(&msg);
     }
 
@@ -354,7 +361,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
 
     if (mKey >= 0)
     {
-      msg.MakeNoteOnMsg(mKey + 48, pKeyboard->GetVelocity(), 0, 0);
+      msg.MakeNoteOnMsg(mKey + 48, pKeyboard->GetVelocity(), 0, currentChan);
       mMidiQueue.Add(&msg);
     }
   }
@@ -489,50 +496,51 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
       // filter only note messages
       if (status == IMidiMsg::kNoteOn && velocity)
       {
-          mKeyStatus[pMsg->NoteNumber()] = true;
+          mKeyStatus[chan][pMsg->NoteNumber()] = true;
           mNumHeldKeys += 1;
       }
       else
       {
-          mKeyStatus[pMsg->NoteNumber()] = false;
+          mKeyStatus[chan][pMsg->NoteNumber()] = false;
           mNumHeldKeys -= 1;
       }
       break;//only add notes
   case IMidiMsg::kControlChange:
       //process control change
-      if (idx < 32) {
-          val = GetParam(idx)->Value();
-          GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
-      }
-      else if (idx < 64) {
-          idx = (IMidiMsg::EControlChangeMsg)(idx & 31);
-          val = GetParam(idx)->Value();
-          double current = GetParam(idx)->GetNormalized();
-          current += pMsg->ControlChange(idx) / 128.;
-          GetParam(idx)->SetNormalized(current);//14 bit controllers
-      }
-      else {
-          idx = (IMidiMsg::EControlChangeMsg)(idx - 16);//to control
-          val = GetParam(idx)->Value();
-          GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
-          //Seem to be outdated by 14 bit use??
-          //6 on/off [64]-[69]
-          //10 general [70]-[79]
-          //4 buttons [80]-[83]
-          //Who knows the 12 notes? [84]-[95]
-          /* UPTO HERE <--------------
-            Plus 2 extras for MIDI chan and edit
-          ------------------------> */
-
-          //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
-          //Unassigned controllers [102]-[119]
-          //Specials [120]-[128] -- N.B. DO NOT USE!!!
-      }
       if (idx < kNumProcessed) {
+          if (idx < 32) {
+              val = GetParam(idx)->Value();
+              GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
+          }
+          else if (idx < 64) {
+              idx = (IMidiMsg::EControlChangeMsg)(idx & 31);
+              val = GetParam(idx)->Value();
+              double current = GetParam(idx)->GetNormalized();
+              current += pMsg->ControlChange(idx) / 128.;
+              GetParam(idx)->SetNormalized(current);//14 bit controllers
+          }
+          else {
+              idx = (IMidiMsg::EControlChangeMsg)(idx - 16);//to control
+              val = GetParam(idx)->Value();
+              GetParam(idx)->SetNormalized(pMsg->ControlChange(idx));
+              //Seem to be outdated by 14 bit use??
+              //6 on/off [64]-[69]
+              //10 general [70]-[79]
+              //4 buttons [80]-[83]
+              //Who knows the 12 notes? [84]-[95]
+              /* UPTO HERE <--------------
+                Plus 2 extras for MIDI chan and edit
+              ------------------------> */
+
+              //Data entry and param selects [96]-[101] -- SPECIAL USE CASES
+              //Unassigned controllers [102]-[119]
+              //Specials [120]-[128] -- N.B. DO NOT USE!!!
+          }
           newParam[chan][idx] = GetParam(idx)->Value();
           if (chan == currentChan) {
               dials[idx]->SetDirty();
               InformHostOfParamChange(idx, GetParam(idx)->GetNormalized());
+              RedrawParamControls();
           }
           else {
               GetParam(idx)->Set(val);//restore
@@ -563,6 +571,7 @@ void IPlugPolySynth::ProcessMidiMsg(IMidiMsg* pMsg)
           GetParam(i)->Set(newParam[currentChan][i]);
       }
       DirtyParameters();
+      RedrawParamControls();
       return;
   default:
       return; // if !note message, nothing gets added to the queue
@@ -583,7 +592,7 @@ int IPlugPolySynth::GetNumKeys()
 bool IPlugPolySynth::GetKeyStatus(int key)
 {
   IMutexLock lock(this);
-  return mKeyStatus[key];
+  return mKeyStatus[currentChan][key];
 }
 
 //Called by the standalone wrapper if someone clicks about
