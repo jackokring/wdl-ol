@@ -155,6 +155,8 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
   IBitmap algKnob = pGraphics->LoadIBitmap(KNOB_ALG_ID, KNOB_ALG_FN, kAlgFrames);
   IBitmap switchKnob = pGraphics->LoadIBitmap(SWITCH_ID, SWITCH_FN, kSwitchFrames);
   IBitmap sliderKnob = pGraphics->LoadIBitmap(SLIDER_ID, SLIDER_FN, kSliderFrames);
+  IBitmap channelKnob = pGraphics->LoadIBitmap(MIDI_ID, MIDI_FN, kChannelFrames);
+  IBitmap twoStateKnob = pGraphics->LoadIBitmap(TWO_STATE_ID, TWO_STATE_FN, kTwoStateFrames);
 
   IBitmap regular = pGraphics->LoadIBitmap(WHITE_KEY_ID, WHITE_KEY_FN, 6);
   IBitmap sharp   = pGraphics->LoadIBitmap(BLACK_KEY_ID, BLACK_KEY_FN);
@@ -371,7 +373,11 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
     double* out1 = outputs[0];
     double* out2 = outputs[1];
 
-    double output[kAlgFrames] = { };
+    double output[kAlgFrames];
+    for (int i = 0; i < kAlgFrames; ++i) {
+        output[i] = 0.;
+    }
+
     CVoiceState* vs;
     for(int j = 0; j < 16; ++j) 
         for (int i = 0; i < kNumProcessed; ++i) {

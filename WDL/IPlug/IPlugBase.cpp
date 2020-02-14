@@ -961,7 +961,7 @@ void IPlugBase::DumpPresetSrcCode(const char* filename, const char* paramEnumNam
     for (i = 0; i < n; ++i)
     {
       IParam* pParam = GetParam(i);
-      if(!mParams.Get(j)->GetCanSave()) continue;
+      if(!mParams.Get(i)->GetCanSave()) continue;
       char paramVal[32];
       switch (pParam->Type())
       {
@@ -1137,7 +1137,7 @@ bool IPlugBase::SaveProgramAsFXP(WDL_String* fileName)
       for (int i = 0; i< NParams(); i++)
       {
         WDL_EndianFloat v32;
-        if(!mParams.Get(j)->GetCanSave()) continue;
+        if(!mParams.Get(i)->GetCanSave()) continue;
         v32.f = (float) mParams.Get(i)->GetNormalized();
         unsigned int swapped = WDL_bswap32(v32.int32);
         pgm.Put(&swapped);
@@ -1241,7 +1241,7 @@ bool IPlugBase::SaveBankAsFXB(WDL_String* fileName)
           pos = pPreset->mChunk.Get(&v, pos);
 
           WDL_EndianFloat v32;
-          if(!mParams.Get(j)->GetCanSave()) continue;
+          if(!mParams.Get(i)->GetCanSave()) continue;
           v32.f = (float) mParams.Get(i)->GetNormalized(v);
           unsigned int swapped = WDL_bswap32(v32.int32);
           bnk.Put(&swapped);
@@ -1332,7 +1332,7 @@ bool IPlugBase::LoadProgramFromFXP(WDL_String* fileName)
           WDL_EndianFloat v32;
           pos = pgm.Get(&v32.int32, pos);
           v32.int32 = WDL_bswap_if_le(v32.int32);
-          if(!mParams.Get(j)->GetCanSave()) continue;
+          if(!mParams.Get(i)->GetCanSave()) continue;
           mParams.Get(i)->SetNormalized((double) v32.f);
         }
 
