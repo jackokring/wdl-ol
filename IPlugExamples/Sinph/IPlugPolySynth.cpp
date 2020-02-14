@@ -183,7 +183,7 @@ IPlugPolySynth::IPlugPolySynth(IPlugInstanceInfo instanceInfo)
       case uAlgorithm:
           show = &algKnob;//different knob
           GetParam(i)->InitEnum(kNames[i],
-              0, kKnobFrames, "Alg");
+              0, kAlgFrames, "Alg");
           break;
       case uNul:
           ok = false;
@@ -402,6 +402,7 @@ void IPlugPolySynth::ProcessDoubleReplacing(double** inputs, double** outputs, i
         if (vs->GetBusy())
         {
             int alg = oldParam[vs->chan][kAlgSelect];
+            //int alg = GetParam(0)->Int();
             output[alg] += sound[alg].process(this, vs);
         }
       }
